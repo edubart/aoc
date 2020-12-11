@@ -1,0 +1,52 @@
+require 'io'
+require 'vector'
+require 'math'
+
+local PREAMBLE_LEN <comptime> = 25
+local preamble: [PREAMBLE_LEN]integer
+
+local function is_valid(num: integer)
+  for i=0,<PREAMBLE_LEN do
+    for j=0,<PREAMBLE_LEN do
+      if i==j then continue end
+      if preamble[i] + preamble[j] == num then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+local count = 0
+local numlist: vector(integer)
+local invalidnum = 0
+for line in io.lines('inputs/day09.txt') do
+  local num = tointeger(line)
+  if count >= PREAMBLE_LEN then
+    if not is_valid(num) then
+      invalidnum = num
+      print('Part 1', invalidnum)
+    end
+  end
+  numlist:push(num)
+  preamble[count % PREAMBLE_LEN] = num
+  count = count + 1
+end
+
+for i=0,<#numlist do
+  local sum = 0
+  local min, max = numlist[i], numlist[i]
+  for j=i,<#numlist do
+    local num = numlist[j]
+    max = math.max(num, max)
+    min = math.min(num, min)
+    sum = sum + num
+    if sum == invalidnum and i ~= j then
+      print('Part 2', min+max)
+      goto found
+    elseif sum > invalidnum then
+      break
+    end
+  end
+end
+::found::

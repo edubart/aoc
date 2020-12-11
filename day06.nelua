@@ -1,0 +1,36 @@
+require 'io'
+
+local questions: [26]integer
+local oneyes_count = 0
+local allyes_count = 0
+local group_size = 0
+
+local function process_group()
+  for i=0,<26 do
+    if questions[i] > 0 then
+      oneyes_count = oneyes_count + 1
+    end
+    if questions[i] == group_size then
+      allyes_count = allyes_count + 1
+    end
+  end
+  group_size = 0
+  questions = {}
+end
+
+for line in io.lines('inputs/day06.txt') do
+  if #line == 0 then
+    process_group()
+    continue
+  end
+  for i=1,#line do
+    local c = line:byte(i) - 'a'_byte
+    questions[c] = questions[c] + 1
+  end
+  group_size = group_size + 1
+end
+
+process_group()
+
+print('Part 1', oneyes_count)
+print('Part 2', allyes_count)

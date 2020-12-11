@@ -1,0 +1,71 @@
+require 'io'
+require 'vector'
+require 'hashmap'
+
+local function splitview(text: stringview, delim: stringview)
+  local res: vector(stringview)
+  local spos = 0
+  while true do
+    local pos = text:find(delim, spos, true)
+    res:push(text:subview(spos, pos-1))
+    if pos == 0 then
+      break
+    end
+    spos = pos + #delim
+  end
+  return res
+end
+
+local map: hashmap(stringview, vector(record{
+  count: integer,
+  color: stringview
+}))
+
+local function has_color(color: stringview, parent_color: stringview): boolean
+  if color == parent_color then
+    return true
+  end
+  for _,entry in pairs(map[parent_color]) do
+    if has_color(color, entry.color) then
+      return true
+    end
+  end
+  return false
+end
+
+local function get_bags_with_color_count(color: stringview)
+  local count = -1
+  for parent_color in pairs(map) do
+    if has_color('shiny gold', parent_color) then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+local function get_bag_count(color: stringview)
+  local count = 1
+  for _,entry in ipairs(map[color]) do
+    count = count + entry.count * get_bag_count(entry.color)
+  end
+  return count
+end
+
+for line in io.lines('inputs/day07.txt') do
+  local space_pos = line:find('bags contain', 1, true)
+  local parent_color = line:subview(1, space_pos-2)
+  local children_desc = line:subview(space_pos + 13, -1)
+  local children_descs = splitview(children_desc, ', ')
+  for _,child_desc in ipairs(children_descs) do
+    if child_desc ~= 'no other bags.' then
+      space_pos = child_desc:find(' ', 1, true)
+      local bag_pos = child_desc:find(' bag', 1, true)
+      local count = tointeger(child_desc:subview(1, space_pos-1))
+      local color = child_desc:subview(space_pos+1, bag_pos-1)
+      map[parent_color]:push({color=color, count=count})
+    end
+  end
+end
+
+print('Part 1', get_bags_with_color_count('shiny gold'))
+print('Part 2', get_bag_count('shiny gold') - 1)

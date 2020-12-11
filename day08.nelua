@@ -1,0 +1,81 @@
+require 'io'
+require 'vector'
+
+local Opcode = @enum {
+  ACC = 0,
+  JMP,
+  NOP
+}
+local Instruction = @record{
+  opcode: Opcode,
+  value: integer,
+  count: integer
+}
+
+local tape: vector(Instruction)
+
+for line in io.lines('inputs/day08.txt') do
+  local space_pos = line:find(' ', 1, true)
+  local opname = line:subview(1, space_pos-1)
+  local value = tointeger(line:subview(space_pos+1))
+  local opcode: Opcode
+  if opname == 'acc' then
+    opcode = Opcode.ACC
+  elseif opname == 'jmp' then
+    opcode = Opcode.JMP
+  elseif opname == 'nop' then
+    opcode = Opcode.NOP
+  else
+    error 'invalid instruction'
+  end
+  tape:push({opcode=opcode,value=value})
+end
+
+local function reset()
+  for i=0,<#tape do
+    tape[i].count = 0
+  end
+end
+
+local function execute(): (boolean, integer)
+  local pc = 0
+  local acc = 0
+  while pc < #tape do
+    local inst = &tape[pc]
+    if inst.count > 0 then
+      return false, acc
+    end
+    inst.count = inst.count + 1
+    if inst.opcode == Opcode.ACC then
+      acc = acc + inst.value
+      pc = pc + 1
+    elseif inst.opcode == Opcode.JMP then
+      pc = pc + inst.value
+    elseif inst.opcode == Opcode.NOP then
+      pc = pc + 1
+    else
+      error 'invalid instruction'
+    end
+  end
+  return true, acc
+end
+
+local ok, acc = execute()
+print('Part 1', acc)
+
+for i=0,<#tape do
+  local opcode = tape[i].opcode
+  if opcode == Opcode.NOP then
+    tape[i].opcode = Opcode.JMP
+  elseif opcode == Opcode.JMP then
+    tape[i].opcode = Opcode.NOP
+  end
+  reset()
+  local ok, acc = execute()
+  if ok then
+    print('Part 2', acc)
+    break
+  else -- restore opcode
+    tape[i].opcode = opcode
+  end
+end

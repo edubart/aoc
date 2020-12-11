@@ -1,0 +1,119 @@
+require 'io'
+require 'vector'
+require 'math'
+
+local SeatState = @enum(byte) {
+  Occupied = '#'_byte,
+  Empty = 'L'_byte,
+  Floor = '.'_byte
+}
+
+local MAX_SEATS <comptime> = 100
+local SeatMap = @[MAX_SEATS][MAX_SEATS]SeatState
+local seats: SeatMap
+local ncols, nrows = 0, 0
+
+for line in io.lines('inputs/day11.txt') do
+  if ncols == 0 then
+    ncols = #line
+  end
+  for y=0,<ncols do
+    seats[nrows][y] = line:byte(y+1)
+  end
+  nrows = nrows + 1
+end
+
+local function get_num_seats_occupied()
+  local count = 0
+  for x=0,<nrows do
+    for y=0,<ncols do
+      if seats[x][y] == SeatState.Occupied then
+        count = count + 1
+      end
+    end
+  end
+  return count
+end
+
+local function apply_rules()
+  local changed = false
+  local newseats: SeatMap <noinit>
+  for x=0,<nrows do
+    for y=0,<ncols do
+      local noccupied = 0
+      for ix=math.max(x-1,0),math.min(x+1,nrows-1) do
+        for iy=math.max(y-1,0),math.min(y+1,ncols-1) do
+          if ix == x and iy == y then continue end
+          if seats[ix][iy] == SeatState.Occupied then
+            noccupied = noccupied + 1
+          end
+        end
+      end
+      local state = seats[x][y]
+      local newstate = state
+      if state ~= SeatState.Floor then
+        if noccupied == 0 then
+          newstate = SeatState.Occupied
+        elseif noccupied >= 4 then
+          newstate = SeatState.Empty
+        end
+      end
+      if newstate ~= state then
+        changed = true
+      end
+      newseats[x][y] = newstate
+    end
+  end
+  seats = newseats
+  return changed
+end
+
+local function apply_rules2()
+  local changed = false
+  local newseats: SeatMap <noinit>
+  for x=0,<nrows do
+    for y=0,<ncols do
+      local noccupied = 0
+      for ix=-1,1 do
+        for iy=-1,1 do
+          if ix == 0 and iy == 0 then continue end
+          for j=1,math.max(ncols,nrows) do
+            local tx, ty = x+ix*j, y+iy*j
+            if tx >= nrows or tx < 0 then break end
+            if ty >= ncols or ty < 0 then break end
+            local state = seats[tx][ty]
+            if state == SeatState.Occupied then
+              noccupied = noccupied + 1
+              break
+            elseif state == SeatState.Empty then
+              break
+            end
+          end
+        end
+      end
+      local state = seats[x][y]
+      local newstate = state
+      if state ~= SeatState.Floor then
+        if noccupied == 0 then
+          newstate = SeatState.Occupied
+        elseif noccupied >= 5 then
+          newstate = SeatState.Empty
+        end
+      end
+      if newstate ~= state then
+        changed = true
+      end
+      newseats[x][y] = newstate
+    end
+  end
+  seats = newseats
+  return changed
+end
+
+local orig_seats = seats
+while apply_rules() do end
+print('Part 1', get_num_seats_occupied())
+
+seats = orig_seats
+while apply_rules2() do end
+print('Part 2', get_num_seats_occupied())

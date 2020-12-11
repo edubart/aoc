@@ -1,0 +1,34 @@
+require 'string'
+require 'io'
+
+local function is_valid1(pass: string, chr: byte, min: integer, max: integer): boolean
+  local n = 0
+  for i=1,#pass do
+    if pass:byte(i) == chr then
+      n = n + 1
+    end
+  end
+  return n >= min and n <= max
+end
+
+local function is_valid2(pass: string, chr: byte, p1: integer, p2: integer): boolean
+  local b1, b2 = pass:byte(p1) == chr, pass:byte(p2) == chr
+  return (b1 or b2) and not (b1 and b2)
+end
+
+local count1, count2 = 0, 0
+for line in io.lines('inputs/day02.txt') do
+  local p1, p2 = line:find('-', 1, true), line:find(':', 1, true)
+  local min, max = tonumber(line:sub(1, p1-1)), tonumber(line:sub(p1+1, p2-3))
+  local chr = line:byte(p2-1)
+  local pass = line:sub(p2+2)
+  if is_valid1(pass, chr, min, max) then
+    count1 = count1 + 1
+  end
+  if is_valid2(pass, chr, min, max) then
+    count2 = count2 + 1
+  end
+end
+
+print('Part 1', count1)
+print('Part 2', count2)

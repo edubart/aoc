@@ -1,0 +1,36 @@
+require 'io'
+require 'math'
+
+local seats: [1024]boolean
+
+local max_id = 0
+for line in io.lines('inputs/day05.txt') do
+  local row, col = 0, 0
+  local n = 128
+  for i=1,7 do
+    n = n / 2
+    if line:byte(i) == 'B'_byte then
+      row = row + n
+    end
+  end
+
+  n = 8
+  for i=8,10 do
+    n = n / 2
+    if line:byte(i) == 'R'_byte then
+      col = col + n
+    end
+  end
+
+  local id = row * 8 + col
+  seats[id] = true
+  max_id = math.max(id, max_id)
+end
+
+print('Part 1', max_id)
+
+for i=8,<127*8 do
+  if not seats[i] and seats[i+1] and seats[i-1] then
+    print('Part 2', i)
+  end
+end

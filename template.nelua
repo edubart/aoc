@@ -1,0 +1,5 @@
+require 'io'
+
+for line in io.lines('day.txt') do
+  print(line)
+end

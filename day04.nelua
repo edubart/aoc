@@ -1,0 +1,103 @@
+require 'io'
+require 'C.string'
+
+local passport: record{
+  byr: string,
+  iyr: string,
+  eyr: string,
+  hgt: string,
+  hcl: string,
+  ecl: string,
+  pid: string
+}
+
+local function is_passport_valid1()
+  return #passport.byr > 0 and
+         #passport.iyr > 0 and
+         #passport.eyr > 0 and
+         #passport.hgt > 0 and
+         #passport.hcl > 0 and
+         #passport.ecl > 0 and
+         #passport.pid > 0
+end
+
+local function is_year_valid(s: string, min: integer, max: integer)
+  if #s ~= 4 or C.strspn(s, '0123456789') ~= 4 then return false end
+  local byr = tointeger(s)
+  if not (byr >= min and byr <= max) then return false end
+  return true
+end
+
+local function is_height_valid(s: string)
+  local numlen = C.strspn(s, '0123456789')
+  if numlen <= 0 then return false end
+  local num = tointeger(s:sub(1,numlen))
+  local suffix = s:sub(numlen+1)
+  if suffix == 'cm' then
+    if not (num >= 150 and num <= 193) then return false end
+  elseif suffix == 'in' then
+    if not (num >= 59 and num <= 76) then return false end
+  else
+    return false
+  end
+  return true
+end
+
+local function is_color_valid(s: string)
+  if s:byte(1) ~= '#'_byte then return false end
+  local s = s:sub(2)
+  if #s ~= 6 or C.strspn(s, '0123456789abcdef') ~= 6 then return false end
+  return true
+end
+
+local function is_passport_valid2()
+  if not is_year_valid(passport.byr, 1920, 2002) then return false end
+  if not is_year_valid(passport.iyr, 2010, 2020) then return false end
+  if not is_year_valid(passport.eyr, 2020, 2030) then return false end
+  if not is_height_valid(passport.hgt) then return false end
+  if not is_color_valid(passport.hcl) then return false end
+  -- ecl
+  if not (passport.ecl == 'amb' or passport.ecl == 'blu' or
+          passport.ecl == 'brn' or passport.ecl == 'gry' or
+          passport.ecl == 'grn' or passport.ecl == 'hzl' or
+          passport.ecl == 'oth') then return false end
+  -- pid
+  if #passport.pid ~= 9 or C.strspn(passport.pid, '0123456789') ~= 9 then return false end
+  return true
+end
+
+local count1, count2 = 0, 0
+local function validate()
+  count1 = count1 + (is_passport_valid1() and 1 or 0)
+  count2 = count2 + (is_passport_valid2() and 1 or 0)
+  passport = {}
+end
+
+for line in io.lines('inputs/day04.txt') do
+  if #line > 0 then
+    local pos = 0
+    repeat
+      local nextspace = line:find(' ', pos, true)
+      local fieldpair = line:sub(pos, nextspace-1)
+      pos = nextspace+1
+      local colonpos = fieldpair:find(':', 1, true)
+      local name = fieldpair:sub(1, colonpos-1)
+      local value = fieldpair:sub(colonpos+1)
+      if     name == 'byr' then passport.byr = value
+      elseif name == 'iyr' then passport.iyr = value
+      elseif name == 'eyr' then passport.eyr = value
+      elseif name == 'hgt' then passport.hgt = value
+      elseif name == 'hcl' then passport.hcl = value
+      elseif name == 'ecl' then passport.ecl = value
+      elseif name == 'pid' then passport.pid = value
+      end
+    until nextspace <= 0
+  else
+    validate()
+  end
+end
+
+validate()
+
+print('Part 1', count1)
+print('Part 2', count2)

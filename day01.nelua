@@ -1,0 +1,33 @@
+require 'io'
+require 'sequence'
+require 'hashmap'
+
+local a: sequence(number), n: integer = {},0
+
+for x in io.lines('inputs/day01.txt') do
+  n = n+1
+  a[n] = tonumber(x)
+end
+
+local entries: hashmap(integer, boolean) = {}
+for _,x in ipairs(a) do
+  local opp = 2020 - x
+  if entries[opp] then
+    print('Part 1', x * opp)
+    break
+  end
+  entries[x] = true
+end
+
+for i=1,n do
+  local x = a[i]
+  for j=i+1,n do
+    local y = a[j]
+    local z = 2020 - x - y
+    if entries[z] then
+      print('Part 2', x*y*z)
+      goto found
+    end
+  end
+end
+::found::
