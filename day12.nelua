@@ -1,0 +1,56 @@
+require 'io'
+require 'math'
+
+local Direction = @enum{
+  East = 0,
+  South,
+  West,
+  North,
+}
+
+local dir: Direction = Direction.East
+local x, y = 0, 0
+local sx, sy = 0, 0
+local wx, wy = 10, 1
+for line in io.lines('inputs/day12.txt') do
+  local ins = line:byte(1)
+  local val = tointeger(line:subview(2))
+  if ins == 'L'_byte then
+    dir = (dir + 4 - (val / 90)) % 4
+    for i=1,val/90 do
+      wx, wy = -wy, wx
+    end
+  elseif ins == 'R'_byte then
+    dir = (dir + (val / 90)) % 4
+    for i=1,val/90 do
+      wx, wy = wy, -wx
+    end
+  elseif ins == 'F'_byte then
+    if dir == Direction.East then
+      x = x+val
+    elseif dir == Direction.North then
+      y = y+val
+    elseif dir == Direction.West then
+      x = x-val
+    else
+      y = y-val
+    end
+    sx = sx + wx*val
+    sy = sy + wy*val
+  elseif ins == 'E'_byte then
+    x = x+val
+    wx = wx+val
+  elseif ins == 'N'_byte then
+    y = y+val
+    wy = wy+val
+  elseif ins == 'W'_byte then
+    x = x-val
+    wx = wx-val
+  elseif ins == 'S'_byte then
+    y = y-val
+    wy = wy-val
+  end
+end
+
+print('Part 1', math.abs(x) + math.abs(y))
+print('Part 2', math.abs(sx) + math.abs(sy))

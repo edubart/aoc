@@ -1,0 +1,81 @@
+require 'io'
+require 'hashmap'
+require 'iterators'
+require 'vector'
+require 'math'
+
+local Position = @record{q: integer, r: integer}
+local HexTile = @record{black: boolean}
+local tiles: hashmap(Position, HexTile)
+tiles:reserve(16384)
+
+## local offs = {{q=1,r=0},{q=-1,r=0},{q=0,r=1},{q=0,r=-1},{q=-1,r=1},{q=1,r=-1}}
+
+local function flip(pos: Position)
+  local tile = tiles:get_ptr(pos)
+  tile.black = not tile.black
+  ## for _,off in ipairs(offs) do
+    tiles:get({q=pos.q + #[off.q]#, r=pos.r + #[off.r]#})
+  ## end
+end
+
+for line in io.lines('inputs/day24.txt') do
+  local line_pos = 1
+  local pos: Position = {q=0,r=0}
+  repeat
+    ## for i,dir in ipairs{'e','w','se','nw','sw','ne'} do
+    if line:subview(line_pos, line_pos + #[#dir-1]#) == #[dir]# then
+      pos.q = pos.q + #[offs[i].q]#
+      pos.r = pos.r + #[offs[i].r]#
+      line_pos = line_pos + #[#dir]#
+      goto parsed
+    end
+    ## end
+    ::parsed::
+  until line_pos > #line
+  flip(pos)
+end
+
+local function get_black_count()
+  local count = 0
+  for _,tile in pairs(tiles) do
+    if tile.black then
+      count = count + 1
+    end
+  end
+  return count
+end
+
+print('Part 1', get_black_count())
+
+local function get_adjacent_black_count(pos: Position)
+  local count = 0
+  ## for _,off in ipairs(offs) do
+    local opos: Position = {q=pos.q + #[off.q]#, r=pos.r + #[off.r]#}
+    if tiles:has(opos) and tiles[opos].black then
+      count = count + 1
+    end
+  ## end
+  return count
+end
+
+local toflip: vector(Position)
+toflip:reserve(100)
+for i=1,100 do
+  for pos,tile in pairs(tiles) do
+    local count = get_adjacent_black_count(pos)
+    if tile.black then
+      if count == 0 or count > 2 then
+        toflip:push(pos)
+      end
+    elseif count == 2 then
+      toflip:push(pos)
+    end
+  end
+  for i,pos in ipairs(toflip) do
+    flip(pos)
+  end
+  toflip:clear()
+end
+
+print('Part 2', get_black_count())
