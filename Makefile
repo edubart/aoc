@@ -13,3 +13,4 @@ all:
 	$(NELUA) day11.nelua
 	$(NELUA) day12.nelua
 	$(NELUA) day24.nelua
+	$(NELUA) day25.nelua

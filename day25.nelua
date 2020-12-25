@@ -1,0 +1,13 @@
+require 'io'
+
+local f = io.open('inputs/day25.txt')
+local card_public_key, door_public_key = tointeger((f:read())), tointeger((f:read()))
+f:close()
+
+local v, encryption_key = 1, 1
+while v ~= door_public_key do
+  v = (v * 7) % 20201227
+  encryption_key = (encryption_key * card_public_key) % 20201227
+end
+
+print('Part 1', encryption_key)
