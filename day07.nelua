@@ -25,7 +25,7 @@ local function has_color(color: stringview, parent_color: stringview): boolean
   if color == parent_color then
     return true
   end
-  for _,entry in pairs(map[parent_color]) do
+  for _,entry in mpairs(map[parent_color]) do
     if has_color(color, entry.color) then
       return true
     end
@@ -35,7 +35,7 @@ end
 
 local function get_bags_with_color_count(color: stringview)
   local count = -1
-  for parent_color in pairs(map) do
+  for parent_color in mpairs(map) do
     if has_color('shiny gold', parent_color) then
       count = count + 1
     end
