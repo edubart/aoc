@@ -2,8 +2,8 @@ require 'io'
 require 'vector'
 require 'hashmap'
 
-local function splitview(text: stringview, delim: stringview)
-  local res: vector(stringview)
+local function splitview(text: string, delim: string)
+  local res: vector(string)
   local spos = 0
   while true do
     local pos = text:find(delim, spos, true)
@@ -16,12 +16,12 @@ local function splitview(text: stringview, delim: stringview)
   return res
 end
 
-local map: hashmap(stringview, vector(record{
+local map: hashmap(string, vector(record{
   count: integer,
-  color: stringview
+  color: string
 }))
 
-local function has_color(color: stringview, parent_color: stringview): boolean
+local function has_color(color: string, parent_color: string): boolean
   if color == parent_color then
     return true
   end
@@ -33,7 +33,7 @@ local function has_color(color: stringview, parent_color: stringview): boolean
   return false
 end
 
-local function get_bags_with_color_count(color: stringview)
+local function get_bags_with_color_count(color: string)
   local count = -1
   for parent_color in mpairs(map) do
     if has_color('shiny gold', parent_color) then
@@ -43,7 +43,7 @@ local function get_bags_with_color_count(color: stringview)
   return count
 end
 
-local function get_bag_count(color: stringview)
+local function get_bag_count(color: string)
   local count = 1
   for _,entry in ipairs(map[color]) do
     count = count + entry.count * get_bag_count(entry.color)
