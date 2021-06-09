@@ -12,10 +12,10 @@ tiles:reserve(16384)
 ## local offs = {{q=1,r=0},{q=-1,r=0},{q=0,r=1},{q=0,r=-1},{q=-1,r=1},{q=1,r=-1}}
 
 local function flip(pos: Position)
-  local tile = tiles:get_ptr(pos)
+  local tile = &tiles[pos]
   tile.black = not tile.black
   ## for _,off in ipairs(offs) do
-    tiles:get({q=pos.q + #[off.q]#, r=pos.r + #[off.r]#})
+    tile = &tiles[{q=pos.q + #[off.q]#, r=pos.r + #[off.r]#}]
   ## end
 end
 
@@ -52,7 +52,8 @@ local function get_adjacent_black_count(pos: Position)
   local count = 0
   ## for _,off in ipairs(offs) do
     local opos: Position = {q=pos.q + #[off.q]#, r=pos.r + #[off.r]#}
-    if tiles:has(opos) and tiles[opos].black then
+    local tile = tiles:peek(opos)
+    if tile and tile.black then
       count = count + 1
     end
   ## end
