@@ -62,7 +62,7 @@ for line in io.lines('inputs/day07.txt') do
       local bag_pos = child_desc:find(' bag', 1, true)
       local count = tointeger(child_desc:subview(1, space_pos-1))
       local color = child_desc:subview(space_pos+1, bag_pos-1)
-      map[parent_color]:push({color=color, count=count})
+      map[parent_color]:push({count=count, color=color})
     end
   end
 end
