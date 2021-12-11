@@ -2,7 +2,7 @@ require 'io'
 require 'sequence'
 
 local nums: sequence(integer)
-for line in io.lines('inputs/day01.txt') do
+for line in io.lines('day01.txt') do
   nums:push(tointeger(line))
 end
 

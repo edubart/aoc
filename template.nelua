@@ -1,5 +1,5 @@
 require 'io'
 
-for line in io.lines('day.txt') do
+for line in io.lines('day01.txt') do
   print(line)
 end

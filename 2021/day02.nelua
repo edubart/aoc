@@ -1,0 +1,34 @@
+require 'io'
+
+do -- part 1
+  local horzpos, depth = 0, 0
+  for line in io.lines('day02.txt') do
+    local _, captures = line:match('(%a+) (%d+)')
+    local command, units = captures[1], tonumber(captures[2])
+    if command == 'forward' then
+      horzpos = horzpos + units
+    elseif command == 'down' then
+      depth = depth + units
+    elseif command == 'up' then
+      depth = depth - units
+    end
+  end
+  print('Part 1', horzpos * depth)
+end
+
+do -- part 2
+  local horzpos, depth, aim = 0, 0, 0
+  for line in io.lines('day02.txt') do
+    local _, captures = line:match('(%a+) (%d+)')
+    local command, units = captures[1], tonumber(captures[2])
+    if command == 'forward' then
+      horzpos = horzpos + units
+      depth = depth + aim * units
+    elseif command == 'down' then
+      aim = aim + units
+    elseif command == 'up' then
+      aim = aim - units
+    end
+  end
+  print('Part 2', horzpos * depth)
+end

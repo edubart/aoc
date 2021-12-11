@@ -1,0 +1,68 @@
+require 'io'
+require 'sequence'
+
+local nbits = 0
+local inputnums: hashmap(integer, boolean) = {}
+
+for line in io.lines('day03.txt') do
+  nbits = nbits ~= 0 and nbits or #line
+  local num = tointeger(line, 2)
+  inputnums[num] = true
+end
+
+local function getbit(num: integer, bit: integer)
+  return (num & (1 << bit) ~= 0) and 1 or 0
+end
+
+local function get_common_bit(nums: hashmap(integer, boolean), bit: integer)
+  local bitcount = 0
+  for num in pairs(nums) do
+    if getbit(num, bit) == 1 then
+      bitcount = bitcount + 1
+    end
+  end
+  return bitcount >= (#nums - bitcount) and 1 or 0
+end
+
+do -- part 1
+  local gamma = 0
+  for bit=0,nbits-1 do
+    if get_common_bit(inputnums, bit) == 1 then
+      gamma = gamma | (1 << bit)
+    end
+  end
+  local epsilon = ~gamma & ((1 << nbits) - 1)
+  print('Part 1', gamma*epsilon)
+end
+
+do -- part 2
+  local oxynums: hashmap(integer, boolean) = {}
+  local co2nums: hashmap(integer, boolean) = {}
+  for num in pairs(inputnums) do
+    oxynums[num] = true
+    co2nums[num] = true
+  end
+  -- oxygen
+  for bit=nbits-1,0,-1 do
+    local commonbit = get_common_bit(oxynums, bit)
+    for num in pairs(oxynums) do
+      if getbit(num, bit) ~= commonbit then
+        oxynums:remove(num)
+      end
+    end
+    if #oxynums <= 1 then break end
+  end
+  local _, oxynum = next(oxynums)
+  -- co2
+  for bit=nbits-1,0,-1 do
+    local uncommonbit = get_common_bit(co2nums, bit) ~ 1
+    for num in pairs(co2nums) do
+      if getbit(num, bit) ~= uncommonbit then
+        co2nums:remove(num)
+      end
+    end
+    if #co2nums <= 1 then break end
+  end
+  local _, co2num = next(co2nums)
+  print('Part 2', oxynum * co2num)
+end
