@@ -1,5 +1,6 @@
 require 'io'
 require 'sequence'
+require 'hashmap'
 
 local nbits = 0
 local inputnums: hashmap(integer, boolean) = {}

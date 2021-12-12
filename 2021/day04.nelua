@@ -1,0 +1,84 @@
+require 'io'
+require 'vector'
+require 'hashmap'
+
+local N <comptime> = 5
+local Board: type = @[N][N]integer
+local boards: vector(Board)
+local numsdrawn: vector(integer)
+
+do -- parse input
+  local file = io.open('day04.txt')
+  -- parse numbers drawn
+  for col in file:read():gmatch('%d+') do
+    local num = tointeger(col)
+    numsdrawn:push(num)
+  end
+  file:read() -- skip empty line
+  -- parse boards
+  local inputboard: Board
+  local lineno = 0
+  for line in file:lines() do
+    if line ~= '' then -- skip empty lines
+      local colno = 0
+      for col in line:gmatch('%d+') do
+        inputboard[lineno][colno] = tointeger(col)
+        colno = colno + 1
+      end
+      lineno = lineno + 1
+      if lineno == N then
+        boards:push(inputboard)
+        lineno = 0
+      end
+    end
+  end
+end
+
+local function is_board_winner(board: *Board, nums: *hashmap(integer, boolean))
+  for i=0,N-1 do
+    local verthits, horzhits = 0, 0
+    for j=0,N-1 do
+      if nums:peek(board[i][j]) then
+        verthits = verthits + 1
+        if verthits == N then return true end
+      end
+      if nums:peek(board[j][i]) then
+        horzhits = horzhits + 1
+        if horzhits == N then return true end
+      end
+    end
+  end
+  return false
+end
+
+local function get_board_score(board: *Board, nums: *hashmap(integer, boolean))
+  local score = 0
+  for i=0,N-1 do
+    for j=0,N-1 do
+      local num = board[i][j]
+      if not nums:peek(num) then
+        score = score + num
+      end
+    end
+  end
+  return score
+end
+
+local nums: hashmap(integer, boolean)
+local wonboards: hashmap(integer, boolean)
+local firstscore = 0
+local lastscore = 0
+for _,num in ipairs(numsdrawn) do
+  nums[num] = true
+  for i,board in ipairs(boards) do
+    if not wonboards[i] and is_board_winner(board, nums) then
+      local score = get_board_score(board, nums) * num
+      firstscore = firstscore == 0 and score or firstscore
+      lastscore = score
+      wonboards[i] = true
+    end
+  end
+end
+
+print('Part 1', firstscore)
+print('Part 2', lastscore)
