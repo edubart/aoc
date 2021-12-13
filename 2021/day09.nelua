@@ -1,0 +1,99 @@
+require 'io'
+require 'math'
+require 'algorithm'
+
+local H <comptime> = 100
+local W <comptime> = 100
+local Point = @record{x: integer, y: integer}
+local heightmap: [H][W]integer
+
+do -- load height map
+  local y = 0
+  for line in io.lines('day09.txt') do
+    local x = 0
+    for d in line:gmatch('%d') do
+      heightmap[y][x] = tointeger(d)
+      x = x + 1
+    end
+    y = y + 1
+  end
+end
+
+local function is_low(y: integer, x: integer)
+  local h = heightmap[y][x]
+  for iy=math.max(y-1, 0), math.min(y+1, H-1) do
+    for ix=math.max(x-1, 0), math.min(x+1, W-1) do
+      if (ix == x and iy ~= y) or (ix ~= x and iy == y) then
+        if heightmap[iy][ix] <= h then
+          return false
+        end
+      end
+    end
+  end
+  return true
+end
+
+local function mark_basin(basin: *hashmap(Point, boolean), x: integer, y: integer)
+  basin[{x=x,y=y}] = true
+  for iy=math.max(y-1, 0), math.min(y+1, H-1) do
+    for ix=math.max(x-1, 0), math.min(x+1, W-1) do
+      if (ix == x and iy ~= y) or (ix ~= x and iy == y) then
+        if heightmap[iy][ix] ~= 9 then
+          if not basin:peek({x=ix,y=iy}) then
+            basin[{x=ix,y=iy}] = false
+          end
+        end
+      end
+    end
+  end
+end
+
+local function find_basin_unchecked(basin: *hashmap(Point, boolean))
+  for p,checked in pairs(basin) do
+    if not checked then
+      return true, p.x, p.y
+    end
+  end
+  return false, 0, 0
+end
+
+local function sort(a: vector(integer)): void
+  -- insertion sort
+  local n = #a
+  if n <= 1 then return end
+  local i = 1
+  for i = 1,<n do
+    local x = a[i]
+    local j = i - 1
+    while j >= 0 and x < a[j] do
+      a[j+1] = a[j]
+      j = j - 1
+    end
+    a[j+1] = x
+    i = i + 1
+  end
+end
+
+local sum = 0
+local basins: vector(integer)
+for y=0,H-1 do
+  for x=0,W-1 do
+    if is_low(y, x) then
+      local risk = heightmap[y][x] + 1
+      sum = sum + risk
+      local basin: hashmap(Point, boolean)
+      basin[{x=x,y=y}] = false
+      while true do
+        local found, bx, by = find_basin_unchecked(basin)
+        if not found then break end
+        mark_basin(basin, bx, by)
+      end
+      basins:push(#basin)
+    end
+  end
+end
+
+sort(basins)
+
+print('Part 1', sum)
+print('Part 2', basins[#basins-1] * basins[#basins-2] * basins[#basins-3])
