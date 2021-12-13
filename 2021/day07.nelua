@@ -1,0 +1,28 @@
+require 'io'
+require 'math'
+require 'vector'
+
+local file = io.open('day07.txt')
+local crabs: vector(integer)
+local minpos, maxpos = math.maxinteger, 0
+for num in file:read():gmatch('%d+') do
+  local pos = tointeger(num)
+  crabs:push(pos)
+  minpos, maxpos = math.min(minpos, pos), math.max(maxpos, pos)
+end
+
+local mintotfuel, mintotfuel2 = math.maxinteger, math.maxinteger
+for alignpos=minpos,maxpos do
+  local totfuel, totfuel2 = 0, 0
+  for i,pos in ipairs(crabs) do
+    local fuel = math.abs(pos - alignpos)
+    local fuel2 = fuel*(fuel+1)//2
+    totfuel = totfuel + fuel
+    totfuel2 = totfuel2 + fuel2
+  end
+  mintotfuel = math.min(mintotfuel, totfuel)
+  mintotfuel2 = math.min(mintotfuel2, totfuel2)
+end
+
+print('Part 1', mintotfuel)
+print('Part 2', mintotfuel2)
