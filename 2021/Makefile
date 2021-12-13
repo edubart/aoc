@@ -7,3 +7,4 @@ all:
 	$(NELUA) day05.nelua
 	$(NELUA) day06.nelua
 	$(NELUA) day07.nelua
+	$(NELUA) day08.nelua

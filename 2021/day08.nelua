@@ -1,0 +1,116 @@
+require 'io'
+require 'vector'
+require 'hashmap'
+
+local DIGIT_PATTERNS: [10]integer = {
+--  gfedcba
+  0b1110111, -- 0
+  0b0100100, -- 1
+  0b1011101, -- 2
+  0b1101101, -- 3
+  0b0101110, -- 4
+  0b1101011, -- 5
+  0b1111011, -- 6
+  0b0100101, -- 7
+  0b1111111, -- 8
+  0b1101111, -- 9
+}
+
+local function getletterbit(x: integer): integer
+  assert(x >= 'a'_b and x <= 'g'_b)
+  return 1 << (x - 'a'_b)
+end
+
+local function hasbits(x: integer, test: integer): boolean
+  return x & test == test
+end
+
+local function getbitcount(x: integer): integer
+  local count = 0
+  while x > 0 do
+    if hasbits(x,1) then
+      count = count + 1
+    end
+    x = x >> 1
+  end
+  return count
+end
+
+local function markwires(wires: *hashmap(integer, integer), patt: integer, bits: integer)
+  for i=0,6 do
+    local bit = 1 << i
+    wires[bit] = wires[bit] & (hasbits(patt, bit) and bits or ~bits)
+  end
+end
+
+local sum = 0
+local count = 0
+for line in io.lines('day08.txt') do
+  local _, caps = line:match('([%a ]+) | ([%a ]+)')
+  local patts, outputs = caps[1], caps[2]
+  local wires: hashmap(integer, integer)
+  local reversewires: hashmap(integer, integer)
+  local pattsbits: vector(integer)
+  local four, seven
+  for i=0,6 do
+    wires[1 << i] = (1 << 7)-1
+  end
+  for patt in patts:gmatch('%a+') do
+    local bits = 0
+    for _,l in ipairs((@span(byte))(patt)) do
+      bits = bits | getletterbit(l)
+    end
+    if #patt == 2 then     -- 1
+      markwires(wires, DIGIT_PATTERNS[1], bits)
+    elseif #patt == 4 then -- 4
+      four = bits
+      markwires(wires, DIGIT_PATTERNS[4], bits)
+    elseif #patt == 3 then -- 7
+      seven = bits
+      markwires(wires, DIGIT_PATTERNS[7], bits)
+    end
+    pattsbits:push(bits)
+  end
+  for _,bits in ipairs(pattsbits) do
+    if getbitcount(bits) == 6 then -- 0,6,9
+      if hasbits(bits, four) then -- 9
+        markwires(wires, DIGIT_PATTERNS[9], bits)
+      elseif hasbits(bits, seven) then -- 0
+        markwires(wires, DIGIT_PATTERNS[0], bits)
+      else -- 6
+        markwires(wires, DIGIT_PATTERNS[6], bits)
+      end
+    end
+  end
+  for i=0,6 do
+    local tobit = 1 << i
+    local frombit = wires[tobit]
+    assert(getbitcount(frombit) == 1)
+    reversewires[frombit] = tobit
+  end
+  local offset = 1000
+  local num = 0
+  for digitpatt in outputs:gmatch('%a+') do
+    if #digitpatt == 2 or #digitpatt == 4 or #digitpatt == 3 or #digitpatt == 7 then
+      count = count  + 1
+    end
+    local digitbits = 0
+    for _,l in ipairs((@span(byte))(digitpatt)) do
+      digitbits = digitbits | reversewires[getletterbit(l)]
+    end
+    local digit = -1
+    for i=0,9 do
+      if digitbits == DIGIT_PATTERNS[i] then
+        digit = i
+        break
+      end
+    end
+    assert(digit >= 0)
+    num = num + digit*offset
+    offset = offset // 10
+  end
+  sum = sum + num
+end
+
+print('Part 1', count)
+print('Part 2', sum)
