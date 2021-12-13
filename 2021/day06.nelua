@@ -1,0 +1,29 @@
+require 'io'
+require 'vector'
+
+local file = io.open('day06.txt')
+local timers: [9]integer
+for num in file:read():gmatch('%d+') do
+  local days = tointeger(num)
+  timers[days] = timers[days] + 1
+end
+
+local function count_laternfish(timers: [9]integer, days: integer)
+  for day=1,days do
+    local newtimers: [9]integer
+    newtimers[6] = timers[0]
+    newtimers[8] = timers[0]
+    for i=0,7 do
+      newtimers[i] = newtimers[i] + timers[i+1]
+    end
+    timers = newtimers
+  end
+  local count = 0
+  for i=0,8 do
+    count = count + timers[i]
+  end
+  return count
+end
+
+print('Part 1', count_laternfish(timers, 80))
+print('Part 2', count_laternfish(timers, 256))
