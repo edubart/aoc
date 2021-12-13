@@ -1,0 +1,40 @@
+require 'io'
+require 'math'
+
+local N <comptime> = 1000
+local map1: [N][N]integer
+local map2: [N][N]integer
+
+for line in io.lines('day05.txt') do
+  local _, caps = line:match('(%d+),(%d+) %-%> (%d+),(%d+)')
+  local x1, y1, x2, y2 = tointeger(caps[1]), tointeger(caps[2]), tointeger(caps[3]), tointeger(caps[4])
+  if x1 == x2 or y1 == y2 then -- vertical/horizontal lines
+    for y=y1,y2,(y1 <= y2 and 1 or -1) do
+      for x=x1,x2,(x1 <= x2 and 1 or -1) do
+        map1[y][x] = map1[y][x] + 1
+        map2[y][x] = map2[y][x] + 1
+      end
+    end
+  elseif math.abs(x2-x1) == math.abs(y2-y1) then -- diagonal lines
+    for i=0,math.abs(x2-x1) do
+      local x = x1 + (x1 <= x2 and i or -i)
+      local y = y1 + (y1 <= y2 and i or -i)
+      map2[y][x] = map2[y][x] + 1
+    end
+  end
+end
+
+local function count_points(map: *[N][N]integer)
+  local n = 0
+  for y=0,N-1 do
+    for x=0,N-1 do
+      if map[y][x] >= 2 then
+        n = n + 1
+      end
+    end
+  end
+  return n
+end
+
+print('Part 1', count_points(map1))
+print('Part 2', count_points(map2))
