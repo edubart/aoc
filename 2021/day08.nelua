@@ -57,7 +57,7 @@ for line in io.lines('day08.txt') do
   end
   for patt in patts:gmatch('%a+') do
     local bits = 0
-    for _,l in ipairs((@span(byte))(patt)) do
+    for _,l in ipairs(patt) do
       bits = bits | getletterbit(l)
     end
     if #patt == 2 then     -- 1
@@ -95,7 +95,7 @@ for line in io.lines('day08.txt') do
       count = count  + 1
     end
     local digitbits = 0
-    for _,l in ipairs((@span(byte))(digitpatt)) do
+    for _,l in ipairs(digitpatt) do
       digitbits = digitbits | reversewires[getletterbit(l)]
     end
     local digit = -1

@@ -1,0 +1,69 @@
+require 'io'
+require 'vector'
+require 'hashmap'
+require 'algorithm'
+
+local Pair = @record{l: int32, r: int32}
+local CacheIndex = @record{l: int32, r: int32, level: int32}
+local CountMap = @hashmap(integer, integer)
+local rules: hashmap(Pair, integer)
+local rulescache: hashmap(CacheIndex, *CountMap)
+
+-- parse polymer template
+local file = io.open('day14.txt')
+local template = file:read()
+file:read() -- skip line
+
+-- parse polymer rules
+for line in file:lines() do
+  local _, caps = line:match('(%a)(%a) %-%> (%a)')
+  local fromleft, fromright, tomid = caps[1][1], caps[2][1], caps[3][1]
+  rules[{fromleft, fromright}] = tomid
+  local counts = new(@CountMap)
+  counts[fromleft] = counts[fromleft] + 1
+  counts[fromright] = counts[fromright] + 1
+  counts[tomid] = counts[tomid] + 1
+  rulescache[CacheIndex{fromleft, fromright, 0}] = counts
+end
+
+local function merge_counts(dest: *CountMap, from: *CountMap)
+  for i,count in pairs(from) do
+    dest[i] = dest[i] + count
+  end
+end
+
+local function get_rule_counts(fromleft: integer, fromright: integer, level: integer)
+  local cacheindex = CacheIndex{fromleft, fromright, level}
+  local counts = rulescache[cacheindex]
+  if counts then return counts end -- cached
+  counts = new(@CountMap)
+  rulescache[cacheindex] = counts
+  local tomid = rules[{fromleft,fromright}]
+  counts[tomid] = -1
+  merge_counts(counts, get_rule_counts(fromleft, tomid, level-1))
+  merge_counts(counts, get_rule_counts(tomid, fromright, level-1))
+  return counts
+end
+
+local function compute(levels: integer)
+  local totcounts: CountMap
+  local prevelem = 0
+  for _,elem in ipairs(template) do
+    if prevelem ~= 0 then
+      merge_counts(totcounts, get_rule_counts(prevelem, elem, levels-1))
+      totcounts[prevelem] = totcounts[prevelem] - 1
+    else
+      totcounts[elem] = totcounts[elem] + 1
+    end
+    prevelem = elem
+  end
+  local orderedcounts: vector(integer)
+  for element,count in pairs(totcounts) do
+    orderedcounts:push(count)
+  end
+  algorithm.sort(orderedcounts)
+  return orderedcounts[#orderedcounts-1] - orderedcounts[0]
+end
+
+print('Part 1', compute(10))
+print('Part 2', compute(40))
