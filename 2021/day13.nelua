@@ -1,0 +1,82 @@
+require 'io'
+require 'math'
+
+local paper: [2000][2000]boolean
+local maxx, maxy = 0, 0
+
+local file = io.open('day13.txt')
+for line in file:lines() do
+  if line == '' then break end
+  local _, caps = line:match('(%d+),(%d+)')
+  local x, y = tointeger(caps[1]), tointeger(caps[2])
+  maxx = math.max(x, maxx)
+  maxy = math.max(y, maxy)
+  paper[y][x] = true
+end
+
+local function foldy(lineno: integer)
+  for x=0,maxx do
+    assert(paper[lineno][x] == false)
+  end
+  for y=0,lineno-1 do
+    local iy = 2*lineno - y
+    for x=0,maxx do
+      paper[y][x] = paper[y][x] or paper[iy][x]
+    end
+  end
+  maxy = lineno-1
+end
+
+local function foldx(lineno: integer)
+  for y=0,maxy do
+    assert(paper[y][lineno] == false)
+  end
+  for x=0,lineno-1 do
+    local ix = 2*lineno - x
+    for y=0,maxy do
+      paper[y][x] = paper[y][x] or paper[y][ix]
+    end
+  end
+  maxx = lineno-1
+end
+
+local function countdots()
+  local count = 0
+  for y=0,maxy do
+    for x=0,maxx do
+      if paper[y][x] then
+        count = count + 1
+      end
+    end
+  end
+  return count
+end
+
+local function printpaper()
+  for y=0,maxy do
+    for x=0,maxx do
+      io.write(paper[y][x] and '#' or '.')
+    end
+    io.write'\n'
+  end
+  io.flush()
+end
+
+local firstcount = 0
+for inst in file:lines() do
+  local _, caps = inst:match('fold along (%a)=(%d+)')
+  local axis, lineno = caps[1], tointeger(caps[2])
+  if axis == 'y' then
+    foldy(lineno)
+  elseif axis == 'x' then
+    foldx(lineno)
+  end
+  if firstcount == 0 then
+    firstcount = countdots()
+  end
+end
+
+print('Part 1', firstcount)
+
+print('Part 2')
+printpaper()
