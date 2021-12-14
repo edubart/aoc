@@ -1,5 +1,7 @@
 require 'io'
 require 'math'
+require 'hashmap'
+require 'vector'
 require 'algorithm'
 
 local H <comptime> = 100
@@ -57,23 +59,6 @@ local function find_basin_unchecked(basin: *hashmap(Point, boolean))
   return false, 0, 0
 end
 
-local function sort(a: vector(integer)): void
-  -- insertion sort
-  local n = #a
-  if n <= 1 then return end
-  local i = 1
-  for i = 1,<n do
-    local x = a[i]
-    local j = i - 1
-    while j >= 0 and x < a[j] do
-      a[j+1] = a[j]
-      j = j - 1
-    end
-    a[j+1] = x
-    i = i + 1
-  end
-end
-
 local sum = 0
 local basins: vector(integer)
 for y=0,H-1 do
@@ -93,7 +78,7 @@ for y=0,H-1 do
   end
 end
 
-sort(basins)
+algorithm.sort(basins)
 
 print('Part 1', sum)
 print('Part 2', basins[#basins-1] * basins[#basins-2] * basins[#basins-3])
