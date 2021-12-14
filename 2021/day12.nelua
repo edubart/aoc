@@ -1,0 +1,52 @@
+require 'io'
+require 'hashmap'
+
+local Node = @record{
+  name: string,
+  big: boolean,
+  visits: integer,
+  links: vector(*Node)
+}
+
+local nodes: hashmap(string, *Node)
+local path: vector(*Node)
+
+local function getnode(name: string)
+  local node = nodes[name]
+  if node then return node end
+  node = new(Node{name=name, big=name:match('^%u+$')})
+  nodes[name] = node
+  return node
+end
+
+local function searchpaths(node: *Node, maxvisits: integer)
+  local numpaths = 0
+  node.visits = node.visits + 1
+  path:push(node)
+  if node.name == 'end' then -- end of path
+    numpaths = numpaths + 1
+  else
+    for _,subnode in ipairs(node.links) do
+      if #subnode.links > 0 or subnode.name == 'end' then
+        if subnode.big or subnode.visits == 0 then -- big cave, or small not visited cave
+          numpaths = numpaths + searchpaths(subnode, maxvisits)
+        elseif maxvisits == 2 and (subnode.visits == 1 and subnode.name ~= 'start') then
+          numpaths = numpaths + searchpaths(subnode, 1)
+        end
+      end
+    end
+  end
+  path:pop()
+  node.visits = node.visits - 1
+  return numpaths
+end
+
+for line in io.lines('day12.txt') do
+  local _, caps = line:match('(%a+)%-(%a+)')
+  local a, b = getnode(caps[1]), getnode(caps[2])
+  a.links:push(b)
+  b.links:push(a)
+end
+
+print('Part 1', searchpaths(nodes['start'], 1))
+print('Part 2', searchpaths(nodes['start'], 2))
