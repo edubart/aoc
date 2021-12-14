@@ -1,0 +1,64 @@
+require 'io'
+require 'math'
+
+local N <comptime> = 10
+local grid: [N][N]integer
+local flashcount = 0
+
+local y = 0
+for line in io.lines('day11.txt') do
+  local x = 0
+  for c in line:gmatch('%d') do
+    grid[y][x] = tointeger(c)
+    x = x + 1
+  end
+  y = y + 1
+end
+
+local function flash(y: integer, x: integer)
+  flashcount = flashcount + 1
+  for iy=math.max(y-1,0),math.min(y+1,N-1) do
+    for ix=math.max(x-1,0),math.min(x+1,N-1) do
+      if not (ix == x and iy == y) then
+        grid[iy][ix] = grid[iy][ix] + 1
+        if grid[iy][ix] == 10 then
+          flash(iy, ix)
+        end
+      end
+    end
+  end
+end
+
+local function do_step()
+  -- increase energy
+  for y=0,<N do
+    for x=0,<N do
+      grid[y][x] = grid[y][x] + 1
+      if grid[y][x] == 10 then
+        flash(y, x)
+      end
+    end
+  end
+  -- reset energy
+  for y=0,<N do
+    for x=0,<N do
+      if grid[y][x] >= 10 then
+        grid[y][x] = 0
+      end
+    end
+  end
+end
+
+for step=1,100 do
+  do_step()
+end
+
+print('Part 1', flashcount)
+
+for step=101,1000 do
+  do_step()
+  if grid == (@[N][N]integer){} then
+    print('Part 2', step)
+    break
+  end
+end
