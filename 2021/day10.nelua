@@ -1,0 +1,53 @@
+require 'io'
+require 'vector'
+require 'algorithm'
+
+local toterrorscore = 0
+local compscores: vector(integer)
+
+for line in io.lines('day10.txt') do
+  local expected: vector(integer)
+  local errorscore = 0
+  for _,c in ipairs(line) do
+    switch c do
+      case '('_b then expected:push(')'_b)
+      case '['_b then expected:push(']'_b)
+      case '{'_b then expected:push('}'_b)
+      case '<'_b then expected:push('>'_b)
+      case ')'_b, ']'_b, '}'_b, '>'_b then
+        if #expected == 0 or c ~= expected:pop() then
+          errorscore = (do
+            switch c do
+            case ')'_b then in 3
+            case ']'_b then in 57
+            case '}'_b then in 1197
+            case '>'_b then in 25137
+            else in 0 end
+          end)
+          toterrorscore = toterrorscore + errorscore
+          break
+        end
+    end
+  end
+  if errorscore == 0 then
+    local compscore = 0
+    while #expected > 0 do
+      local c = expected:pop()
+      local score = (do
+        switch c do
+        case ')'_b then in 1
+        case ']'_b then in 2
+        case '}'_b then in 3
+        case '>'_b then in 4
+        else in 0 end
+      end)
+      compscore = compscore * 5 + score
+    end
+    compscores:push(compscore)
+  end
+end
+
+algorithm.sort(compscores)
+
+print('Part 1', toterrorscore)
+print('Part 2', compscores[#compscores // 2])
