@@ -1,10 +1,11 @@
 require 'io'
 require 'hashmap'
+require 'heapqueue'
 require 'math'
 require 'list'
 
-local grid: [500][500]byte
-local Point = @record{x: int16, y: int16}
+local grid: [500][500]int8
+local nodes: [500][500]int32
 
 -- read tiles
 local N = 0
@@ -28,52 +29,36 @@ for y=0,<5*N do
   end
 end
 
+local Point = @record{x: int16, y: int16}
+local FrontierEntry = @record{pos: Point, cost: int32}
+function FrontierEntry.__lt(a: FrontierEntry, b: FrontierEntry)
+  return a.cost <= b.cost
+end
+
 -- A* algorithm, (see https://www.redblobgames.com/pathfinding/a-star/introduction.html)
-local function astar(n: integer)
-  local FrontierEntry = @record{pos: Point, cost: int32}
-  local Node = @record{from: Point, cost: int32}
-  local nodes: hashmap(Point, Node)
-  local frontier: list(FrontierEntry)
+local function astar(n: int16): int32
   local start = Point{0,0}
   local goal = Point{n-1, n-1}
-  nodes[start] = Node{}
-  frontier:pushfront{start, 0}
-  repeat
-    local current = frontier:popfront().pos
-    if current == goal then -- reached goal
-      local risksum = 0
-      repeat
-        risksum = risksum + grid[current.y][current.x]
-        current = nodes[current].from
-      until current == start
-      return risksum
-    end
-    local currentcost = nodes[current].cost
-    for y=math.max(current.y-1,0),math.min(current.y+1,n-1) do
-      for x=math.max(current.x-1,0),math.min(current.x+1,n-1) do
-        if (x == current.x and y ~= current.y) or (x ~= current.x and y == current.y) then
-          local neighborpos = Point{x,y}
-          local cost = currentcost + grid[neighborpos.y][neighborpos.x]
-          local neighbornode = &nodes[neighborpos]
-          if neighbornode.cost == 0 or cost < neighbornode.cost then
-            local heuristiccost = cost
-            -- heuristiccost = heuristiccost + math.abs(goal.x - neighborpos.x) + math.abs(goal.y - neighborpos.y)
-            local it = nilptr
-            for findit,item in pairs(frontier) do
-              if heuristiccost <= item.cost then
-                it = findit
-                break
-              end
-            end
-            frontier:insert(it, {neighborpos, heuristiccost})
-            neighbornode.from = current
-            neighbornode.cost = cost
-          end
+  local frontier: heapqueue(FrontierEntry)
+  nodes = {}
+  frontier:reserve(1000)
+  frontier:push{start, 0}
+  while true do
+    local current = frontier:pop()
+    if current.pos == goal then break end -- reached goal
+    for _,d in ipairs(&(@[]Point){{-1,0},{1,0},{0,-1},{0,1}}) do
+      local y, x = current.pos.y+d.y, current.pos.x+d.x
+      if y >= 0 and y < n and x >= 0 and x < n then
+        local cost = current.cost + grid[y][x]
+        local nodecost = nodes[y][x]
+        if nodecost == 0 or cost < nodecost then
+          frontier:push{Point{x,y}, cost}
+          nodes[y][x] = cost
         end
       end
     end
-  until frontier:empty()
-  return 0
+  end
+  return nodes[goal.y][goal.x]
 end
 
 print('Part 1', astar(N))
