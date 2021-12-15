@@ -1,5 +1,6 @@
 require 'io'
 require 'hashmap'
+require 'vector'
 
 local Node = @record{
   name: string,

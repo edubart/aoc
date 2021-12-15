@@ -1,11 +1,9 @@
 require 'io'
-require 'hashmap'
-require 'heapqueue'
 require 'math'
-require 'list'
+require 'heapqueue'
 
 local grid: [500][500]int8
-local nodes: [500][500]int32
+local nodes: [500][500]int16
 
 -- read tiles
 local N = 0
@@ -30,9 +28,9 @@ for y=0,<5*N do
 end
 
 local Point = @record{x: int16, y: int16}
-local FrontierEntry = @record{pos: Point, cost: int32}
+local FrontierEntry = @record{cost: int32, pos: Point}
 function FrontierEntry.__lt(a: FrontierEntry, b: FrontierEntry)
-  return a.cost <= b.cost
+  return a.cost < b.cost
 end
 
 -- A* algorithm, (see https://www.redblobgames.com/pathfinding/a-star/introduction.html)
@@ -42,19 +40,15 @@ local function astar(n: int16): int32
   local frontier: heapqueue(FrontierEntry)
   nodes = {}
   frontier:reserve(1000)
-  frontier:push{start, 0}
-  while true do
+  frontier:push{0, start}
+  while #frontier > 0 do
     local current = frontier:pop()
-    if current.pos == goal then break end -- reached goal
-    for _,d in ipairs(&(@[]Point){{-1,0},{1,0},{0,-1},{0,1}}) do
+    for _,d in ipairs(&(@[]Point){{1,0},{0,1},{-1,0},{0,-1}}) do
       local y, x = current.pos.y+d.y, current.pos.x+d.x
-      if y >= 0 and y < n and x >= 0 and x < n then
+      if y >= 0 and y < n and x >= 0 and x < n and nodes[y][x] == 0 then
         local cost = current.cost + grid[y][x]
-        local nodecost = nodes[y][x]
-        if nodecost == 0 or cost < nodecost then
-          frontier:push{Point{x,y}, cost}
-          nodes[y][x] = cost
-        end
+        nodes[y][x] = cost
+        frontier:push{cost, Point{x,y}}
       end
     end
   end
