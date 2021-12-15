@@ -1,0 +1,80 @@
+require 'io'
+require 'hashmap'
+require 'math'
+require 'list'
+
+local grid: [500][500]byte
+local Point = @record{x: int16, y: int16}
+
+-- read tiles
+local N = 0
+local y = 0
+for line in io.lines('day15.txt') do
+  if N == 0 then N = #line end
+  local x = 0
+  for c in line:gmatch('%d') do
+    grid[y][x] = tointeger(c)
+    x = x + 1
+  end
+  y = y + 1
+end
+
+-- expand tiles
+for y=0,<5*N do
+  for x=0,<5*N do
+    if x < N and y < N then continue end
+    local risk = grid[y % N][x % N] + (x // N) + (y // N)
+    grid[y][x] = risk <= 9 and risk or risk % 9
+  end
+end
+
+-- A* algorithm, (see https://www.redblobgames.com/pathfinding/a-star/introduction.html)
+local function astar(n: integer)
+  local FrontierEntry = @record{pos: Point, cost: int32}
+  local Node = @record{from: Point, cost: int32}
+  local nodes: hashmap(Point, Node)
+  local frontier: list(FrontierEntry)
+  local start = Point{0,0}
+  local goal = Point{n-1, n-1}
+  nodes[start] = Node{}
+  frontier:pushfront{start, 0}
+  repeat
+    local current = frontier:popfront().pos
+    if current == goal then -- reached goal
+      local risksum = 0
+      repeat
+        risksum = risksum + grid[current.y][current.x]
+        current = nodes[current].from
+      until current == start
+      return risksum
+    end
+    local currentcost = nodes[current].cost
+    for y=math.max(current.y-1,0),math.min(current.y+1,n-1) do
+      for x=math.max(current.x-1,0),math.min(current.x+1,n-1) do
+        if (x == current.x and y ~= current.y) or (x ~= current.x and y == current.y) then
+          local neighborpos = Point{x,y}
+          local cost = currentcost + grid[neighborpos.y][neighborpos.x]
+          local neighbornode = &nodes[neighborpos]
+          if neighbornode.cost == 0 or cost < neighbornode.cost then
+            local heuristiccost = cost
+            -- heuristiccost = heuristiccost + math.abs(goal.x - neighborpos.x) + math.abs(goal.y - neighborpos.y)
+            local it = nilptr
+            for findit,item in pairs(frontier) do
+              if heuristiccost <= item.cost then
+                it = findit
+                break
+              end
+            end
+            frontier:insert(it, {neighborpos, heuristiccost})
+            neighbornode.from = current
+            neighbornode.cost = cost
+          end
+        end
+      end
+    end
+  until frontier:empty()
+  return 0
+end
+
+print('Part 1', astar(N))
+print('Part 2', astar(N*5))
