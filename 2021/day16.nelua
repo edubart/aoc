@@ -1,0 +1,86 @@
+require 'io'
+require 'math'
+
+local data
+local readpos = 0
+local versum = 0
+
+local function readdata(line: string)
+  local i = 0
+  data = new(@byte, #line // 2)
+  for bstr in line:gmatch('%w%w') do
+    data[i] = tointeger(bstr, 16)
+    i = i + 1
+  end
+  versum = 0
+  readpos = 0
+end
+
+local function op(typeid: integer, a: integer, b: integer)
+  switch typeid do
+    case 0 then return a + b
+    case 1 then return a * b
+    case 2 then return math.min(a, b)
+    case 3 then return math.max(a, b)
+    case 5 then return a > b and 1 or 0
+    case 6 then return a < b and 1 or 0
+    case 7 then return a == b and 1 or 0
+    else return 0
+  end
+end
+
+local function readbit()
+  local res = (data[readpos // 8] >> (7 - readpos % 8)) & 1
+  readpos = readpos + 1
+  return res
+end
+
+local function readbits(size: integer)
+  local res = 0
+  for i=0,<size do
+    res = res | readbit() << (size - 1 - i)
+  end
+  return res
+end
+
+local function readpacket()
+  local version = readbits(3)
+  local typeid = readbits(3)
+  versum = versum + version
+  local num = 0
+  if typeid == 4 then -- literal value
+    local i = 64
+    repeat
+      i = i - 4
+      local keepreading = readbit() == 1
+      num = num | (readbits(4) << i)
+    until not keepreading
+    num = num >> i
+  else -- operator
+    local lentypeid = readbit()
+    if lentypeid == 0 then
+      local len = readbits(15)
+      local startpos = readpos
+      if len > 0 then
+        num = readpacket()
+        while readpos - startpos < len do
+          num = op(typeid, num, readpacket())
+        end
+      end
+    else
+      local len = readbits(11)
+      num = readpacket()
+      for i=2,len do
+        num = op(typeid, num, readpacket())
+      end
+    end
+  end
+  return num
+end
+
+for line in io.lines('day16.txt') do
+  readdata(line)
+  local num = readpacket()
+  print('Part 1', versum)
+  print('Part 2', num)
+end
