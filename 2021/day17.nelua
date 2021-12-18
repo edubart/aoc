@@ -1,0 +1,62 @@
+require 'io'
+require 'math'
+
+local function findy(ty1: integer, ty2: integer)
+  local minty = math.min(ty1, ty2)
+  local maxty = math.max(math.abs(ty1), math.abs(ty2)) + 1
+  for ivy=maxty,-maxty,-1 do
+    local y = 0
+    local maxy = 0
+    local vy = ivy
+    while true do
+      y = y + vy
+      maxy = math.max(maxy, y)
+      if y >= ty1 and y <= ty2 then -- hit
+        return maxy
+      elseif y < minty then -- overshoot
+        break
+      end
+      vy = vy - 1
+    end
+  end
+  return 0
+end
+
+local function countvel(tx1: integer, tx2: integer, ty1: integer, ty2: integer)
+  local minty = math.min(ty1, ty2)
+  local maxtx = math.max(math.abs(tx1), math.abs(tx2)) + 1
+  local maxty = math.max(math.abs(ty1), math.abs(ty2)) + 1
+  local hits = 0
+  for ivx=-maxtx,maxtx do
+    for ivy=-maxty,maxty do
+      local x, y = 0, 0
+      local vx, vy = ivx, ivy
+      while true do
+        x = x + vx
+        y = y + vy
+        if vx > 0 then
+          vx = vx - 1
+        elseif vx < 0 then
+          vx = vx + 1
+        end
+        vy = vy - 1
+        if x >= tx1 and x <= tx2 and y >= ty1 and y <= ty2 then -- hit
+          hits = hits + 1
+          break
+        elseif y < minty or (vx == 0 and not (x >= tx1 and x <= tx2)) then -- overshoot
+          break
+        end
+      end
+    end
+  end
+  return hits
+end
+
+for line in io.lines('day17.txt') do
+  local _, caps = line:match('target area: x=([%d-]+)%.%.([%d-]+), y=([%d-]+)%.%.([%d-]+)')
+  local tx1, tx2, ty1, ty2 = tointeger(caps[1]), tointeger(caps[2]), tointeger(caps[3]), tointeger(caps[4])
+  print('Part 1', findy(ty1, ty2))
+  print('Part 2', countvel(tx1, tx2, ty1, ty2))
+end
+
+## print(require'nelua.version'.NELUA_SEMVER)

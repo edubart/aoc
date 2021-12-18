@@ -8,7 +8,7 @@ local versum = 0
 local function readdata(line: string)
   local i = 0
   data = new(@byte, #line // 2)
-  for bstr in line:gmatch('%w%w') do
+  for bstr in line:gmatchview('%w%w') do
     data[i] = tointeger(bstr, 16)
     i = i + 1
   end

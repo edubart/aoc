@@ -1,0 +1,220 @@
+require 'io'
+require 'vector'
+require 'coroutine'
+require 'math'
+
+local Node = @record{
+  left: *Node,
+  right: *Node,
+  parent: *Node,
+  value: int32,
+  numeric: boolean,
+}
+
+function Node:depth()
+  local depth = 0
+  local node = self.parent
+  while node do
+    depth = depth + 1
+    node = node.parent
+  end
+  return depth
+end
+
+function Node:destroy()
+  if self.left then self.left:destroy() end
+  if self.right then self.right:destroy() end
+  delete(self)
+end
+
+function Node.join(left: *Node, right: *Node): *Node
+  local node = new(Node{=left,right})
+  left.parent = node
+  right.parent = node
+  return node
+end
+
+function Node:walk_left(): (auto, coroutine, *Node, coroutine)
+  local function walk_left_next_co(node: *Node): *Node
+    coroutine.yield(node)
+    coroutine.pop(coroutine.running(), &node)
+    if node.right then walk_left_next_co(node.right) end
+    if node.left then walk_left_next_co(node.left) end
+    return nilptr
+  end
+  local function walk_left_next(co: coroutine, node: *Node): (boolean, *Node)
+    coroutine.resume(co, node)
+    coroutine.pop(co, &node)
+    return node ~= nilptr, node
+  end
+  local co = coroutine.create(walk_left_next_co)
+  return walk_left_next, co, self, co
+end
+
+function Node:walk_right(): (auto, coroutine, *Node, coroutine)
+  local function walk_right_next_co(node: *Node): *Node
+    coroutine.yield(node)
+    coroutine.pop(coroutine.running(), &node)
+    if node.left then walk_right_next_co(node.left) end
+    if node.right then walk_right_next_co(node.right) end
+    return nilptr
+  end
+  local function walk_right_next(co: coroutine, node: *Node): (boolean, *Node)
+    coroutine.resume(co, node)
+    coroutine.pop(co, &node)
+    return node ~= nilptr, node
+  end
+  local co = coroutine.create(walk_right_next_co)
+  return walk_right_next, co, self, co
+end
+
+
+function Node:explode(root: *Node)
+  do --left
+    local track = false
+    for node in root:walk_left() do
+      if not track and node == self.left then
+        track = true
+      elseif track and node.numeric then
+        node.value = node.value + self.left.value
+        break
+      end
+    end
+  end
+  do --right
+    local track = false
+    for node in root:walk_right() do
+      if not track and node == self.right then
+        track = true
+      elseif track and node.numeric then
+        node.value = node.value + self.right.value
+        break
+      end
+    end
+  end
+  self.left:destroy()
+  self.right:destroy()
+  self.left = nilptr
+  self.right = nilptr
+  self.numeric = true
+  self.value = 0
+end
+
+function Node:split()
+  self.left = new(Node{
+    parent = self,
+    value = math.ifloor(self.value / 2),
+    numeric = true,
+  })
+  self.right = new(Node{
+    parent = self,
+    value = math.iceil(self.value / 2),
+    numeric = true,
+  })
+  self.numeric = false
+  self.value = 0
+end
+
+function Node:reduce()
+  repeat
+    local changed = false
+    for node in self:walk_right() do
+      if not node.numeric and node:depth() == 4 then
+        node:explode(self)
+        changed = true
+        break
+      end
+    end
+    if not changed then
+      for node in self:walk_right() do
+        if node.numeric and node.value >= 10 then
+          node:split()
+          changed = true
+          break
+        end
+      end
+    end
+  until not changed
+end
+
+function Node:magnitude(): integer
+  if self.numeric then
+    return self.value
+  else
+    return 3*self.left:magnitude() + 2*self.right:magnitude()
+  end
+end
+
+function Node.add(left: *Node, right: *Node): *Node
+  local node = Node.join(left, right)
+  node:reduce()
+  return node
+end
+
+function Node.parse(chunk: string): *Node
+  if chunk:find('^%d+$') ~= 0 then -- number
+    return new(Node{value=tointeger(chunk), numeric=true})
+  else -- pair
+    chunk = chunk:subview(2,-2)
+    local ok, caps <close>
+    if chunk[1] == '['_b then
+      ok, caps = chunk:matchview('(%b[]),(.*)')
+    else
+      ok, caps = chunk:matchview('(%d+),(.*)')
+    end
+    return Node.join(Node.parse(caps[1]), Node.parse(caps[2]))
+  end
+end
+
+function Node:clone(): *Node
+  if self.numeric then
+    return new(Node{numeric=true,value=self.value})
+  else
+    local left = self.left:clone()
+    local right = self.right:clone()
+    local node = new(Node{
+      left=left,
+      right=right,
+    })
+    left.parent = node
+    right.parent = node
+    return node
+  end
+end
+
+local nodes: vector(*Node)
+
+do -- part 1
+  local result: *Node
+  for line <close> in io.lines('day18.txt') do
+    local node = Node.parse(line)
+    nodes:push(node)
+    if not result then
+      result = node:clone()
+    else
+      result = Node.add(result, node:clone())
+    end
+  end
+  print('Part 1', result:magnitude())
+  result:destroy()
+end
+
+do -- part 2
+  local max = 0
+  for l,lnode in ipairs(nodes) do
+    for r,rnode in ipairs(nodes) do
+      local result = Node.add(lnode:clone(), rnode:clone())
+      max = math.max(max, result:magnitude())
+      result:destroy()
+      result = Node.add(rnode:clone(), lnode:clone())
+      max = math.max(max, result:magnitude())
+      result:destroy()
+    end
+  end
+  print('Part 2', max)
+end
+
+for i,node in ipairs(nodes) do
+  node:destroy()
+end
+nodes:destroy()
