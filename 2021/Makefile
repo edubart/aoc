@@ -18,3 +18,4 @@ all:
 	$(NELUA) day16.nelua
 	$(NELUA) day17.nelua
 	$(NELUA) day18.nelua
+	$(NELUA) day19.nelua

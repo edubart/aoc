@@ -1,0 +1,189 @@
+require 'io'
+require 'vector'
+require 'hashmap'
+require 'math'
+
+local vec3 = @record{x: int32, y: int32, z: int32}
+local vec3pair = @record{pq: vec3, mpq: vec3}
+local Scanner = @record{
+  beacons: vector(vec3),
+  distmap: hashmap(vec3, hashmap(integer, vec3)),
+  pos: vec3,
+}
+
+function vec3.__sub(a: vec3, b: vec3): vec3
+  return vec3{a.x-b.x, a.y-b.y, a.z-b.z}
+end
+
+function vec3.__add(a: vec3, b: vec3): vec3
+  return vec3{a.x+b.x, a.y+b.y, a.z+b.z}
+end
+
+function vec3.__len(a: vec3): int32
+  return a.x*a.x + a.y*a.y + a.z*a.z
+end
+
+function vec3.manhattan_distance(a: vec3, b: vec3): int32
+  return math.abs(a.x - b.x) + math.abs(a.y - b.y) + math.abs(a.z - b.z)
+end
+
+function vec3.rotate(a: vec3, k: integer): vec3
+  ##[[
+  local rotvecs = {}
+  do
+    local DIRECTIONS = {
+      {x= 1,y= 0,z= 0},
+      {x=-1,y= 0,z= 0},
+      {x= 0,y= 1,z= 0},
+      {x= 0,y=-1,z= 0},
+      {x= 0,y= 0,z= 1},
+      {x= 0,y= 0,z=-1},
+    }
+    local count = 0
+    for i=1,6 do
+      for j=1,6 do
+        local u, v = DIRECTIONS[i], DIRECTIONS[j]
+        -- dot product u . v
+        local dotuv = u.x*v.x + u.y*v.y + u.z*v.z
+        if dotuv == 0 then
+          local w = { -- cross product u x v
+            x=u.y*v.z - u.z*v.y,
+            y=u.z*v.x - u.x*v.z,
+            z=u.x*v.y - u.y*v.x
+          }
+          count = count + 1
+          rotvecs[count] = {u=u,v=v,w=w}
+        end
+      end
+    end
+  end
+  ]]
+  ## for i,vecs in ipairs(rotvecs) do
+  if k == #[i-1]# then
+    ## local u, v, w = vecs.u, vecs.v, vecs.w
+    -- matrix multiplication  (u v w) . a
+    return vec3{
+      #[u.x]#*a.x + #[v.x]#*a.y + #[w.x]#*a.z,
+      #[u.y]#*a.x + #[v.y]#*a.y + #[w.y]#*a.z,
+      #[u.z]#*a.x + #[v.z]#*a.y + #[w.z]#*a.z,
+    }
+  end
+  ## end
+  return vec3{}
+end
+
+function Scanner:build_distmap()
+  self.distmap:destroy()
+  for i,p in ipairs(self.beacons) do
+    local dists = &self.distmap[p]
+    dists:reserve(#self.beacons-1)
+    for j,q in ipairs(self.beacons) do
+      if j ~= i then
+        local pq = q - p
+        dists[#pq] = pq
+      end
+    end
+  end
+end
+
+function Scanner:match(oscan: *Scanner): boolean
+  for map,adists in pairs(self.distmap) do
+    for op,odists in pairs(oscan.distmap) do
+      for k=0,<24 do
+        local left = 12-1
+        local i = 0
+        for adist,mpq in pairs(adists) do
+          if #adists - i < left then break end
+          i = i + 1
+          local pq = odists:peek(adist)
+          if pq then
+            local pq = $pq
+            if pq == mpq:rotate(k) then
+              left = left - 1
+              if left <= 0 then
+                self.pos = op-map:rotate(k)
+                for i,beaconpos in ipairs(self.beacons) do
+                  self.beacons[i] = self.pos+beaconpos:rotate(k)
+                end
+                self:build_distmap()
+                return true
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  return false
+end
+
+local function match_scanners(scanners: vector(*Scanner))
+  local foundscanners: vector(*Scanner)
+  local unfoundscanners: vector(*Scanner)
+  foundscanners:push(scanners[0])
+  for i=1,<#scanners do
+    unfoundscanners:push(scanners[i])
+  end
+  for i,oscan in ipairs(foundscanners) do
+    local ok, j, scan = next(unfoundscanners, -1)
+    while ok do
+      if scan:match(oscan) then
+        foundscanners:push(scan)
+        unfoundscanners:remove(j)
+        ok, j, scan = next(unfoundscanners, j-1)
+      else
+        ok, j, scan = next(unfoundscanners, j)
+      end
+    end
+  end
+end
+
+local function count_beacons(scanners: vector(*Scanner))
+  local beacons: hashmap(vec3, boolean)
+  for i,scan in ipairs(scanners) do
+    for i,p in ipairs(scan.beacons) do
+      beacons[p] = true
+    end
+  end
+  return #beacons
+end
+
+local function get_max_distance(scanners: vector(*Scanner))
+  local maxdist = 0
+  for i,scan1 in ipairs(scanners) do
+    for j,scan2 in ipairs(scanners) do
+      maxdist = math.max(maxdist, vec3.manhattan_distance(scan1.pos, scan2.pos))
+    end
+  end
+  return maxdist
+end
+
+local function read_input()
+  local scanners: vector(*Scanner)
+  local scanner: *Scanner
+  for line in io.lines('day19.txt') do
+    if line:find('scanner %d+') ~= 0 then
+      scanner = new(Scanner{})
+      scanners:push(scanner)
+    elseif #line > 0 then
+      local ok, caps = line:matchview('([-%d]+),([-%d]+),([-%d]+)')
+      local pos: vec3 = {tointeger(caps[1]), tointeger(caps[2]), tointeger(caps[3])}
+      scanner.beacons:push(pos)
+    end
+  end
+  for i,scan in ipairs(scanners) do
+    scan:build_distmap()
+  end
+  return scanners
+end
+
+local scanners = read_input()
+match_scanners(scanners)
+
+local numbeacons = count_beacons(scanners)
+print('Part 1', numbeacons)
+assert(numbeacons == 438)
+
+local maxdist = get_max_distance(scanners)
+print('Part 2', maxdist)
+assert(maxdist == 11985)
