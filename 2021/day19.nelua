@@ -3,27 +3,34 @@ require 'vector'
 require 'hashmap'
 require 'math'
 
-local vec3 = @record{x: int32, y: int32, z: int32}
-local vec3pair = @record{pq: vec3, mpq: vec3}
+local vec3 = @record{x: int32, y: int32, z: int32, w: int32}
+local vec3pair = @record{a: vec3, b: vec3}
 local Scanner = @record{
   beacons: vector(vec3),
-  distmap: hashmap(vec3, hashmap(integer, vec3)),
+  distmap: hashmap(int32, boolean),
   pos: vec3,
 }
 
-function vec3.__sub(a: vec3, b: vec3): vec3
+function vec3.__sub(a: vec3, b: vec3): vec3 <inline>
   return vec3{a.x-b.x, a.y-b.y, a.z-b.z}
 end
 
-function vec3.__add(a: vec3, b: vec3): vec3
+function vec3.__add(a: vec3, b: vec3): vec3 <inline>
   return vec3{a.x+b.x, a.y+b.y, a.z+b.z}
+end
+
+function vec3.__hash(a: vec3): usize <inline>
+  return (@usize)(a.x) +
+         (@usize)(a.y) * 0xffff +
+         (@usize)(a.z) * 0xffffffff +
+         (@usize)(a.w) * 0xffffffffffff
 end
 
 function vec3.__len(a: vec3): int32
   return a.x*a.x + a.y*a.y + a.z*a.z
 end
 
-function vec3.manhattan_distance(a: vec3, b: vec3): int32
+function vec3.manhattan_distance(a: vec3, b: vec3): int32 <inline>
   return math.abs(a.x - b.x) + math.abs(a.y - b.y) + math.abs(a.z - b.z)
 end
 
@@ -73,44 +80,40 @@ function vec3.rotate(a: vec3, k: integer): vec3
 end
 
 function Scanner:build_distmap()
-  self.distmap:destroy()
+  self.distmap:reserve(#self.beacons * #self.beacons)
   for i,p in ipairs(self.beacons) do
-    local dists = &self.distmap[p]
-    dists:reserve(#self.beacons-1)
     for j,q in ipairs(self.beacons) do
-      if j ~= i then
-        local pq = q - p
-        dists[#pq] = pq
-      end
+      self.distmap[#(p-q)] = true
     end
   end
 end
 
 function Scanner:match(oscan: *Scanner): boolean
-  for map,adists in pairs(self.distmap) do
-    for op,odists in pairs(oscan.distmap) do
+  local matchcount = 0
+  for dist in pairs(self.distmap) do
+    if oscan.distmap:peek(dist) then
+      matchcount = matchcount + 1
+    end
+  end
+  local COMB_12_2 <comptime> = 66
+  if matchcount < COMB_12_2 then return false end
+  local deltacount: hashmap(vec3, int32) <close>
+  deltacount:reserve(8192)
+  for i,apos in ipairs(self.beacons) do
+    for j,opos in ipairs(oscan.beacons) do
       for k=0,<24 do
-        local left = 12-1
-        local i = 0
-        for adist,mpq in pairs(adists) do
-          if #adists - i < left then break end
-          i = i + 1
-          local pq = odists:peek(adist)
-          if pq then
-            local pq = $pq
-            if pq == mpq:rotate(k) then
-              left = left - 1
-              if left <= 0 then
-                self.pos = op-map:rotate(k)
-                for i,beaconpos in ipairs(self.beacons) do
-                  self.beacons[i] = self.pos+beaconpos:rotate(k)
-                end
-                self:build_distmap()
-                return true
-              end
-            end
+        local delta = opos - apos:rotate(k)
+        delta.w = k
+        local count = &deltacount[delta]
+        local newcount = $count + 1
+        if newcount >= 4 then -- 4 should be enough? (the correct is 12)
+          for i,beaconpos in ipairs(self.beacons) do -- update positions
+            self.beacons[i] = delta + beaconpos:rotate(k)
           end
+          self.pos = delta
+          return true
         end
+        $count = newcount
       end
     end
   end
@@ -118,28 +121,31 @@ function Scanner:match(oscan: *Scanner): boolean
 end
 
 local function match_scanners(scanners: vector(*Scanner))
-  local foundscanners: vector(*Scanner)
-  local unfoundscanners: vector(*Scanner)
+  local foundscanners: vector(*Scanner) <close>
+  local unfoundscanners: vector(*Scanner) <close>
+  foundscanners:reserve(#scanners)
   foundscanners:push(scanners[0])
+  unfoundscanners:reserve(#scanners - 1)
   for i=1,<#scanners do
     unfoundscanners:push(scanners[i])
   end
   for i,oscan in ipairs(foundscanners) do
-    local ok, j, scan = next(unfoundscanners, -1)
-    while ok do
+    local j = 0
+    while j < #unfoundscanners do
+      local scan = unfoundscanners[j]
       if scan:match(oscan) then
         foundscanners:push(scan)
         unfoundscanners:remove(j)
-        ok, j, scan = next(unfoundscanners, j-1)
       else
-        ok, j, scan = next(unfoundscanners, j)
+        j = j +1
       end
     end
   end
 end
 
 local function count_beacons(scanners: vector(*Scanner))
-  local beacons: hashmap(vec3, boolean)
+  local beacons: hashmap(vec3, boolean) <close>
+  beacons:reserve(512)
   for i,scan in ipairs(scanners) do
     for i,p in ipairs(scan.beacons) do
       beacons[p] = true
@@ -160,13 +166,14 @@ end
 
 local function read_input()
   local scanners: vector(*Scanner)
+  scanners:reserve(48)
   local scanner: *Scanner
-  for line in io.lines('day19.txt') do
+  for line <close> in io.lines('day19.txt') do
     if line:find('scanner %d+') ~= 0 then
       scanner = new(Scanner{})
       scanners:push(scanner)
     elseif #line > 0 then
-      local ok, caps = line:matchview('([-%d]+),([-%d]+),([-%d]+)')
+      local ok, caps <close> = line:matchview('([-%d]+),([-%d]+),([-%d]+)')
       local pos: vec3 = {tointeger(caps[1]), tointeger(caps[2]), tointeger(caps[3])}
       scanner.beacons:push(pos)
     end
@@ -182,8 +189,9 @@ match_scanners(scanners)
 
 local numbeacons = count_beacons(scanners)
 print('Part 1', numbeacons)
-assert(numbeacons == 438)
 
 local maxdist = get_max_distance(scanners)
 print('Part 2', maxdist)
+
+assert(numbeacons == 438)
 assert(maxdist == 11985)
