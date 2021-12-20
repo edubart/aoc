@@ -7,7 +7,7 @@ local vec3 = @record{x: int32, y: int32, z: int32, w: int32}
 local vec3pair = @record{a: vec3, b: vec3}
 local Scanner = @record{
   beacons: vector(vec3),
-  distmap: hashmap(int32, boolean),
+  distmap: hashmap(int32, vec3pair),
   pos: vec3,
 }
 
@@ -83,38 +83,43 @@ function Scanner:build_distmap()
   self.distmap:reserve(#self.beacons * #self.beacons)
   for i,p in ipairs(self.beacons) do
     for j,q in ipairs(self.beacons) do
-      self.distmap[#(p-q)] = true
+      self.distmap[#(p-q)] = {p,q}
     end
   end
 end
 
 function Scanner:match(oscan: *Scanner): boolean
   local matchcount = 0
-  for dist in pairs(self.distmap) do
-    if oscan.distmap:peek(dist) then
+  local matches: vector(vec3pair) <close>
+  for dist,apair in pairs(self.distmap) do
+    local opair = oscan.distmap:peek(dist)
+    if opair then
+      matches:push{opair.a, apair.a}
       matchcount = matchcount + 1
     end
   end
   local COMB_12_2 <comptime> = 66
   if matchcount < COMB_12_2 then return false end
   local deltacount: hashmap(vec3, int32) <close>
-  deltacount:reserve(8192)
-  for i,apos in ipairs(self.beacons) do
-    for j,opos in ipairs(oscan.beacons) do
-      for k=0,<24 do
-        local delta = opos - apos:rotate(k)
-        delta.w = k
-        local count = &deltacount[delta]
-        local newcount = $count + 1
-        if newcount >= 4 then -- 4 should be enough? (the correct is 12)
-          for i,beaconpos in ipairs(self.beacons) do -- update positions
-            self.beacons[i] = delta + beaconpos:rotate(k)
-          end
-          self.pos = delta
-          return true
+  deltacount:reserve(512)
+  local iters = 0
+  for i,pair in ipairs(matches) do
+    local opos, apos = pair.a, pair.b
+    for k=0,<24 do
+      local delta = opos - apos:rotate(k)
+      delta.w = k
+      local count = &deltacount[delta]
+      local newcount = $count + 1
+      iters = iters + 1
+      if newcount >= 3 then -- 3 should be enough?
+        for i,beaconpos in ipairs(self.beacons) do -- update positions
+          self.beacons[i] = delta + beaconpos:rotate(k)
         end
-        $count = newcount
+        self.pos = delta
+        self:build_distmap()
+        return true
       end
+      $count = newcount
     end
   end
   return false
