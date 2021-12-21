@@ -195,7 +195,9 @@ do -- part 1
       result = Node.add(result, node:clone())
     end
   end
-  print('Part 1', result:magnitude())
+  local magnitude = result:magnitude()
+  print('Part 1', magnitude)
+  assert(magnitude == 4137)
   result:destroy()
 end
 
@@ -212,6 +214,7 @@ do -- part 2
     end
   end
   print('Part 2', max)
+  assert(max == 4573)
 end
 
 for i,node in ipairs(nodes) do

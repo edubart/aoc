@@ -8,65 +8,51 @@ local function read_input()
   return tointeger(caps1[1]), tointeger(caps2[1])
 end
 
-local rollcount = 0
-local function deterministic_roll()
-  rollcount = rollcount+1
-  return rollcount
-end
-
-local function deterministic_turn(pos: integer)
-  local a = deterministic_roll() + deterministic_roll() + deterministic_roll()
-  return (pos + a - 1) % 10 + 1
-end
-
 local function compute1(pos1: integer, pos2: integer)
-  local score1, score2 = 0, 0
+  local score1: uint64, score2: uint64 = 0, 0
+  local rollcount: uint64 = 0
   while true do
-    pos1 = deterministic_turn(pos1)
-    score1 = score1 + pos1
+    pos1 = (pos1 + rollcount*3 + 6) % 10
+    score1 = score1 + pos1 + 1
+    rollcount = rollcount + 3
     if score1 >= 1000 then break end
-    pos2 = deterministic_turn(pos2)
-    score2 = score2 + pos2
+    pos2 = (pos2 + rollcount*3 + 6) % 10
+    score2 = score2 + pos2 + 1
+    rollcount = rollcount + 3
     if score2 >= 1000 then break end
   end
   return rollcount * math.min(score1, score2)
 end
 
-local combs: [9]uint64
+local combs: [10]uint64
 for i=1,3 do
   for j=1,3 do
     for k=1,3 do
-      local n = i+j+k-1
+      local n = i+j+k
       combs[n] = combs[n] + 1
     end
   end
 end
 
-local cache: hashmap(
-  record{
-    pos1: uint64,
-    pos2: uint64,
-    score1: uint64,
-    score2: uint64
-  },record{
-    wins1: uint64,
-    wins2: uint64,
-  }
-)
+local cache: [10][10][21][21]record{
+  wins1: uint64,
+  wins2: uint64,
+  filled: boolean
+}
 
-local function compute2(pos1: uint64, pos2: uint64, score1: uint64, score2: uint64) : (uint64, uint64)
-  local entry = cache:peek{pos1,pos2,score1,score2}
-  if entry then return entry.wins1, entry.wins2 end
+local function compute2(pos1: uint32, pos2: uint32, score1: uint32, score2: uint32) : (uint64, uint64)
+  local entry = &cache[pos1][pos2][score1][score2]
+  if entry.filled then return entry.wins1, entry.wins2 end
   local wins1: uint64, wins2: uint64 = 0, 0
-  for i: uint64=2,8 do
-    local npos1: uint64 = (pos1 + i) % 10 + 1
-    local nscore1: uint64 = score1 + npos1
+  for i: uint32=3,9 do
+    local npos1: uint32 = (pos1 + i) % 10
+    local nscore1: uint32 = score1 + npos1 + 1
     if nscore1 >= 21 then
       wins1 = wins1 + combs[i]
     else
-      for j: uint64=2,8 do
-        local npos2: uint64 = (pos2 + j) % 10 + 1
-        local nscore2: uint64 = score2 + npos2
+      for j: uint32=3,9 do
+        local npos2: uint32 = (pos2 + j) % 10
+        local nscore2: uint32 = score2 + npos2 + 1
         if nscore2 >= 21 then
           wins2 = wins2 + combs[i]*combs[j]
         else
@@ -77,14 +63,14 @@ local function compute2(pos1: uint64, pos2: uint64, score1: uint64, score2: uint
       end
     end
   end
-  cache[{pos1,pos2,score1,score2}] = {wins1,wins2}
+  $entry = {wins1,wins2,true}
   return wins1, wins2
 end
 
 local pos1, pos2 = read_input()
-local res = compute1(pos1, pos2)
+local res = compute1(pos1-1, pos2-1)
 print('Part 1', res)
-local maxwins = math.max(compute2(pos1, pos2, 0, 0))
+local maxwins = math.max(compute2(pos1-1, pos2-1, 0, 0))
 print('Part 2', maxwins)
 
 assert(res == 503478)
