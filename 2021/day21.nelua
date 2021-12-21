@@ -1,0 +1,91 @@
+require 'io'
+require 'math'
+
+local function read_input()
+  local file = io.open('day21.txt')
+  local ok, caps1 = file:read():matchview(': (%d+)')
+  local ok, caps2 = file:read():matchview(': (%d+)')
+  return tointeger(caps1[1]), tointeger(caps2[1])
+end
+
+local rollcount = 0
+local function deterministic_roll()
+  rollcount = rollcount+1
+  return rollcount
+end
+
+local function deterministic_turn(pos: integer)
+  local a = deterministic_roll() + deterministic_roll() + deterministic_roll()
+  return (pos + a - 1) % 10 + 1
+end
+
+local function compute1(pos1: integer, pos2: integer)
+  local score1, score2 = 0, 0
+  while true do
+    pos1 = deterministic_turn(pos1)
+    score1 = score1 + pos1
+    if score1 >= 1000 then break end
+    pos2 = deterministic_turn(pos2)
+    score2 = score2 + pos2
+    if score2 >= 1000 then break end
+  end
+  return rollcount * math.min(score1, score2)
+end
+
+local combs: [9]uint64
+for i=1,3 do
+  for j=1,3 do
+    for k=1,3 do
+      local n = i+j+k-1
+      combs[n] = combs[n] + 1
+    end
+  end
+end
+
+local cache: hashmap(
+  record{
+    pos1: uint64,
+    pos2: uint64,
+    score1: uint64,
+    score2: uint64
+  },record{
+    wins1: uint64,
+    wins2: uint64,
+  }
+)
+
+local function compute2(pos1: uint64, pos2: uint64, score1: uint64, score2: uint64) : (uint64, uint64)
+  local entry = cache:peek{pos1,pos2,score1,score2}
+  if entry then return entry.wins1, entry.wins2 end
+  local wins1: uint64, wins2: uint64 = 0, 0
+  for i: uint64=2,8 do
+    local npos1: uint64 = (pos1 + i) % 10 + 1
+    local nscore1: uint64 = score1 + npos1
+    if nscore1 >= 21 then
+      wins1 = wins1 + combs[i]
+    else
+      for j: uint64=2,8 do
+        local npos2: uint64 = (pos2 + j) % 10 + 1
+        local nscore2: uint64 = score2 + npos2
+        if nscore2 >= 21 then
+          wins2 = wins2 + combs[i]*combs[j]
+        else
+          local w1: uint64, w2: uint64 = compute2(npos1, npos2, nscore1, nscore2)
+          wins1 = wins1 + w1*combs[i]*combs[j]
+          wins2 = wins2 + w2*combs[i]*combs[j]
+        end
+      end
+    end
+  end
+  cache[{pos1,pos2,score1,score2}] = {wins1,wins2}
+  return wins1, wins2
+end
+
+local pos1, pos2 = read_input()
+local res = compute1(pos1, pos2)
+print('Part 1', res)
+local maxwins = math.max(compute2(pos1, pos2, 0, 0))
+print('Part 2', maxwins)
+
+assert(res == 503478)
+assert(maxwins == 716241959649754)
