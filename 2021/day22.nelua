@@ -2,20 +2,10 @@ require 'io'
 require 'vector'
 require 'math'
 
--- vec3
-local vec3 = @record{x: int32, y: int32, z: int32}
+local vec3 = @record{x: integer, y: integer, z: integer}
+local Cuboid = @record{i: vec3, e: vec3}
 
-function vec3.__add(a: vec3, b: vec3): vec3
-  return vec3{a.x+b.x, a.y+b.y, a.z+b.z}
-end
-
--- Cuboid
-local Cuboid = @record{
-  i: vec3,
-  e: vec3,
-}
-
-local function intersect_axis(aix: int64, aex: int64, bix: int64, bex: int64): (int64, int64)
+local function intersect_axis(aix: integer, aex: integer, bix: integer, bex: integer): (integer, integer)
   if bix >= aix and bix <= aex then
     return bix, math.min(bex, aex)
   elseif bex >= aix and bex <= aex then
@@ -44,244 +34,110 @@ function Cuboid.merge(a: Cuboid, b: Cuboid): Cuboid
 end
 
 function Cuboid.area(self: Cuboid)
-  return (@int64)(self.e.x-self.i.x+1)*(@int64)(self.e.y-self.i.y+1)*(@int64)(self.e.z-self.i.z+1)
+  return (@integer)(self.e.x-self.i.x+1)*(@integer)(self.e.y-self.i.y+1)*(@integer)(self.e.z-self.i.z+1)
 end
 
 function Cuboid.valid(self: Cuboid)
   return self.e.x >= self.i.x and self.e.y >= self.i.y and self.e.z >= self.i.z
 end
 
-local BRANCH_SECTION: Cuboid <const> = Cuboid{i={0,0,0},e={-1,-1,-1}}
+local sections: vector(Cuboid)
+sections:reserve(4096)
 
--- Octree
-local OctreeNode = @record{
-  section: Cuboid,
-  nodes: [8]*OctreeNode,
-}
-
-function OctreeNode:destroy()
-  for i,node in ipairs(self.nodes) do
-    if node then
-      node:destroy()
-    end
-  end
-  delete(self)
-end
-
-function OctreeNode:isleaf()
-  return self.section ~= BRANCH_SECTION
-end
-
-function OctreeNode:set(pos: vec3, size: int32, section: Cuboid)
-  if self:isleaf() then
-    local inter = self.section:intersect(section)
-    if inter == section then
-      return
-    end
-    if inter == self.section then
-      self.section = section
-      return
-    end
-    local merged = self.section:merge(section)
-    if merged:area() == self.section:area() + section:area() - inter:area() then
-      self.section = merged
+local function merge_or_add(section: Cuboid, i: integer)
+  for k=i,#sections-1 do
+    local sect = sections[k]
+    local merged = section:merge(sect)
+    if merged:area() == section:area() + sect:area() - section:intersect(sect):area() then
+      sections[k] = merged
       return
     end
   end
-  local bounds = Cuboid{pos, vec3{pos.x+size-1,pos.y+size-1,pos.z+size-1}}
-  if section == bounds then
-    self.section = section
-    for i,node in ipairs(self.nodes) do
-      if node then
-        node:destroy()
-      end
-    end
-    self.nodes = {}
-    return
-  end
-  local halfsize = size // 2
-  if self:isleaf() then -- split nodes
-    local i = 0
-    for oz:int32=0,1 do
-      for oy:int32=0,1 do
-        for ox:int32=0,1 do
-          local nodebounds: Cuboid = {
-            i=pos+vec3{ox*halfsize,oy*halfsize,oz*halfsize},
-            e=pos+vec3{(ox+1)*halfsize-1,(oy+1)*halfsize-1,(oz+1)*halfsize-1},
-          }
-          local nodesection = self.section:intersect(nodebounds)
-          if nodesection:area() > 0 then
-            self.nodes[i] = new(OctreeNode{section=nodesection})
-          end
-          i = i + 1
-        end
-      end
-    end
-    self.section = BRANCH_SECTION
-  end
-  do -- update nodes
-    local i = 0
-    for oz:int32=0,1 do
-      for oy:int32=0,1 do
-        for ox:int32=0,1 do
-          local nodebounds: Cuboid = {
-            i=pos+vec3{ox*halfsize,oy*halfsize,oz*halfsize},
-            e=pos+vec3{(ox+1)*halfsize-1,(oy+1)*halfsize-1,(oz+1)*halfsize-1},
-          }
-          local nodesection = section:intersect(nodebounds)
-          if nodesection:area() > 0 then
-            local node = self.nodes[i]
-            if not node then
-              node = new(OctreeNode{section=nodesection})
-              self.nodes[i] = node
-            else
-              node:set(nodebounds.i, halfsize, nodesection)
-            end
-          end
-          i = i + 1
-        end
-      end
-    end
-  end
-  do -- merge nodes
-    local count = 0
-    local i = 0
-    for oz:int32=0,1 do
-      for oy:int32=0,1 do
-        for ox:int32=0,1 do
-          local node = self.nodes[i]
-          local nodebounds: Cuboid = {
-            i=pos+vec3{ox*halfsize,oy*halfsize,oz*halfsize},
-            e=pos+vec3{(ox+1)*halfsize-1,(oy+1)*halfsize-1,(oz+1)*halfsize-1},
-          }
-          if node and node:isleaf() and node.section == nodebounds then
-            count = count + 1
-          end
-          i = i + 1
-        end
-      end
-    end
-    if count >= 8 then
-      self.section = bounds
-      for i,node in ipairs(self.nodes) do
-        node:destroy()
-      end
-      self.nodes = {}
-    end
-  end
+  sections:push(section)
 end
 
-function OctreeNode:count()
-  if self:isleaf() then
-    return self.section:area()
-  end
-  local count = 0
-  for i,leaf in ipairs(self.nodes) do
-    if leaf then
-      count = count + leaf:count()
-    end
-  end
-  return count
-end
-
-local N <comptime> = 131072
-local root = new(OctreeNode{section=BRANCH_SECTION})
-
-local rules: vector(Cuboid)
-
-local function add(newrule: Cuboid)
-  for i=0,<#rules do
-    local rule = rules[i]
-    local inte = newrule:intersect(rule)
-    local merged = newrule:merge(rule)
-    if merged:area() == newrule:area() + rule:area() - inte:area() then
-      rules[i] = merged
-      return
-    end
-  end
-  rules:push(newrule)
-end
-
-local function remove(remrule: Cuboid)
-  local oldrules <close> = rules
-  rules = {}
-  for i,rule in ipairs(oldrules) do
-    local inte = remrule:intersect(rule)
-    if inte:area() == 0 then
-      rules:push(rule)
-    else
-      local nrule: Cuboid
+local function remove(section: Cuboid)
+  local i = 0
+  while i < #sections do
+    local sect = sections[i]
+    local inte = section:intersect(sect)
+    if inte:area() > 0 then
+      sections:remove(i)
+      local split: Cuboid
       for ix=1,3 do
         switch ix do
-          case 1 then nrule.i.x = rule.i.x   nrule.e.x = inte.i.x-1
-          case 2 then nrule.i.x = inte.i.x   nrule.e.x = inte.e.x
-          case 3 then nrule.i.x = inte.e.x+1 nrule.e.x = rule.e.x
+          case 1 then split.i.x = sect.i.x   split.e.x = inte.i.x-1
+          case 2 then split.i.x = inte.i.x   split.e.x = inte.e.x
+          case 3 then split.i.x = inte.e.x+1 split.e.x = sect.e.x
         end
         for iy=1,3 do
           switch iy do
-            case 1 then nrule.i.y = rule.i.y   nrule.e.y = inte.i.y-1
-            case 2 then nrule.i.y = inte.i.y   nrule.e.y = inte.e.y
-            case 3 then nrule.i.y = inte.e.y+1 nrule.e.y = rule.e.y
+            case 1 then split.i.y = sect.i.y   split.e.y = inte.i.y-1
+            case 2 then split.i.y = inte.i.y   split.e.y = inte.e.y
+            case 3 then split.i.y = inte.e.y+1 split.e.y = sect.e.y
           end
           for iz=1,3 do
             switch iz do
-              case 1 then nrule.i.z = rule.i.z   nrule.e.z = inte.i.z-1
-              case 2 then nrule.i.z = inte.i.z   nrule.e.z = inte.e.z
-              case 3 then nrule.i.z = inte.e.z+1 nrule.e.z = rule.e.z
+              case 1 then split.i.z = sect.i.z   split.e.z = inte.i.z-1
+              case 2 then split.i.z = inte.i.z   split.e.z = inte.e.z
+              case 3 then split.i.z = inte.e.z+1 split.e.z = sect.e.z
             end
-            if nrule:valid() and nrule ~= inte then
-              add(nrule)
+            if split:valid() and split ~= inte then
+              merge_or_add(split, math.max(i, #sections-10))
             end
           end
         end
       end
+    else
+      i = i + 1
     end
   end
 end
 
 local function read_input()
-  for line <close> in io.lines('day22.txt') do
-    local ok, caps <close> = line:matchview('(%a+) x=([-%d]+)%.%.([-%d]+),y=([-%d]+)%.%.([-%d]+),z=([-%d]+)%.%.([-%d]+)')
+  for line in io.lines('day22.txt') do
+    local ok, caps = line:matchview('(%a+) x=([-%d]+)%.%.([-%d]+),y=([-%d]+)%.%.([-%d]+),z=([-%d]+)%.%.([-%d]+)')
     local on: boolean = caps[1] == 'on'
-    local pi: vec3 = {tointeger(caps[2]),tointeger(caps[4]),tointeger(caps[6])}
-    local pe: vec3 = {tointeger(caps[3]),tointeger(caps[5]),tointeger(caps[7])}
-    local rule = Cuboid{pi, pe}
-    if rule:valid() then
-      if on then
-        add(rule)
-      else
-        remove(rule)
-      end
+    local sect = Cuboid{
+      i={tointeger(caps[2]),tointeger(caps[4]),tointeger(caps[6])},
+      e={tointeger(caps[3]),tointeger(caps[5]),tointeger(caps[7])}
+    }
+    remove(sect)
+    if on then
+      sections:push(sect)
     end
   end
 end
 
 local function part1()
-  $root = OctreeNode{section=BRANCH_SECTION}
-  for i,rule in ipairs(rules) do
-    rule.i = vec3{math.max(rule.i.x,-50),math.max(rule.i.y,-50),math.max(rule.i.z,-50)}
-    rule.e = vec3{math.min(rule.e.x, 50),math.min(rule.e.y, 50),math.min(rule.e.z, 50)}
-    if rule:valid() then
-      root:set({-N,-N,-N}, 2*N, rule)
+  local count = 0
+  for i,sect in ipairs(sections) do
+    sect.i = vec3{math.max(sect.i.x,-50),math.max(sect.i.y,-50),math.max(sect.i.z,-50)}
+    sect.e = vec3{math.min(sect.e.x, 50),math.min(sect.e.y, 50),math.min(sect.e.z, 50)}
+    if sect:valid() then
+      count = count + sect:area()
     end
   end
-  return root:count()
+  return count
 end
 
 local function part2()
-  $root = OctreeNode{section=BRANCH_SECTION}
-  for i,rule in ipairs(rules) do
-    root:set({-N,-N,-N}, 2*N, rule)
+  local count = 0
+  for i,sect in ipairs(sections) do
+    if sect:valid() then
+      count = count + sect:area()
+    end
   end
-  return root:count()
+  return count
 end
 
 read_input()
+print(#sections)
 
 local p1 = part1()
 print('Part 1', p1)
 assert(p1 == 564654)
 
 local p2 = part2()
-print('Part 2', root:count())
+print('Part 2', p2)
 assert(p2 == 1214193181891104)
