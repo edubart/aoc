@@ -58,5 +58,3 @@ for line in io.lines('day17.txt') do
   print('Part 1', findy(ty1, ty2))
   print('Part 2', countvel(tx1, tx2, ty1, ty2))
 end
-
-## print(require'nelua.version'.NELUA_SEMVER)

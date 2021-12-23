@@ -1,0 +1,215 @@
+require 'io'
+require 'math'
+require 'hashmap'
+
+local OPEN: byte <comptime> = '.'_b
+local W <comptime> = 13
+local H = 5
+local Map = @[7][W]byte
+local initmap: Map
+
+local function read_input()
+  local map: Map
+  local file <close> = io.open('day23.txt')
+  local y = 0
+  for line <close> in file:lines() do
+    local x = 0
+    for c in line:gmatchview('.') do
+      map[y][x] = c[1]
+      x = x + 1
+    end
+    y = y + 1
+  end
+  return map
+end
+
+local function get_tile_cost(tile: byte) <inline>
+  switch tile do
+    case 'A'_b then return 1
+    case 'B'_b then return 10
+    case 'C'_b then return 100
+    case 'D'_b then return 1000
+  end
+  return 0
+end
+
+local function is_room_aligned(x: integer) <inline>
+  return x == 3 or x == 5 or x == 7 or x == 9
+end
+
+local function is_hallway(y: integer) <inline>
+  return y == 1
+end
+
+local function get_room_x(tile: byte) <inline>
+  switch tile do
+    case 'A'_b then return 3
+    case 'B'_b then return 5
+    case 'C'_b then return 7
+    case 'D'_b then return 9
+  end
+  return -1
+end
+
+local function is_goal_reached(map: *Map)
+  return map[2][3] == 'A'_b and map[2][5] == 'B'_b and map[2][7] == 'C'_b and map[2][9] == 'D'_b
+end
+
+local function can_leave(map: *Map, sx: integer, sy: integer)
+  local tile = map[sy][sx]
+  if not (tile >= 'A'_b and tile <= 'D'_b) then -- not moveable piece
+    return false
+  end
+  if not (map[sy-1][sx] == OPEN or map[sy+1][sx] == OPEN or
+          map[sy][sx-1] == OPEN or map[sy][sx+1] == OPEN) then -- no open space around
+    return false
+  end
+  if sx == get_room_x(tile) then -- avoid leaving room when not needed
+    local finished = true
+    for y=H-2,sy,-1 do -- check tiles vertically
+      if map[y][sx] ~= tile then
+        finished = false
+        break
+      end
+    end
+    if finished then -- already in the correct place
+      return false
+    end
+  end
+  return true
+end
+
+local function can_reach(map: *Map, sx: integer, sy: integer, dx: integer, dy: integer)
+  local tile = map[sy][sx]
+  if is_hallway(sy) then -- in hallway
+    if is_hallway(dy) then -- can only go to rooms
+      return false
+    end
+    if dx ~= get_room_x(tile) then -- can only go to the correct room
+      return false
+    end
+    local xstep = sx <= dx and 1 or -1
+    for x=sx+xstep,dx,xstep do -- check open spaces horizontally
+      if map[sy][x] ~= OPEN then
+        return false
+      end
+    end
+    for y=sy+1,dy,1 do -- check open spaces vertically
+      if map[y][dx] ~= OPEN then
+        return false
+      end
+    end
+    for y=H-2,2,-1 do -- can only go to room bottom
+      if map[y][dx] ~= tile then
+        if dy ~= y then
+          return false
+        end
+        break
+      end
+    end
+  else -- in room
+    if not is_hallway(dy) then -- can only go to hallway
+      return false
+    end
+    if is_room_aligned(dx) then -- cannot go to open space above rooms
+      return false
+    end
+    for y=sy-1,dy,-1 do -- check open spaces vertically
+      if map[y][sx] ~= OPEN then
+        return false
+      end
+    end
+    local xstep = sx <= dx and 1 or -1
+    for x=sx+xstep,dx,xstep do -- check open spaces horizontally
+      if map[dy][x] ~= OPEN then
+        return false
+      end
+    end
+  end
+  return true
+end
+
+local function moveable_iterator(map: *Map)
+  local function next(map: *Map, i: isize): (boolean, isize, integer, integer)
+    for j:usize=i+1,<W*H do
+      local x, y = j % W, j // W
+      if can_leave(map, x, y) then
+        return true, j, x, y
+      end
+    end
+    return false, i+1, 0, 0
+  end
+  return next, map, -1
+end
+
+local function open_iterator(map: *Map)
+  local function next(map: *Map, i: isize): (boolean, isize, integer, integer)
+    for j:usize=i+1,<W*H do
+      local x, y = j % W, j // W
+      if map[y][x] == '.'_b then
+        return true, j, x, y
+      end
+    end
+    return false, i+1, 0, 0
+  end
+  return next, map, -1
+end
+
+local cache: hashmap(Map, integer)
+
+local function find_best_cost(map: Map): integer
+  local mincost = math.maxinteger
+  for i,sx,sy in moveable_iterator(map) do
+    for j,dx,dy in open_iterator(map) do
+      if can_reach(map, sx, sy, dx, dy) then
+        local stile = map[sy][sx]
+        local steps = math.abs(dx-sx) + math.abs(dy-sy)
+        local cost = steps * get_tile_cost(stile)
+        if cost < mincost then
+          local nextmap: Map = map
+          local nextcost
+          nextmap[dy][dx] = stile
+          nextmap[sy][sx] = OPEN
+          if is_goal_reached(nextmap) then
+            nextcost = 0
+          else
+            local entry = cache:peek(nextmap)
+            if entry then
+              nextcost = $entry
+            else
+              nextcost = find_best_cost(nextmap)
+            end
+          end
+          if nextcost ~= math.maxinteger then
+            mincost = math.min(mincost, nextcost + cost)
+          end
+        end
+      end
+    end
+  end
+  cache[map] = mincost
+  return mincost
+end
+
+local function unfold()
+  H = H + 2
+  initmap[H-1] = initmap[H-3]
+  initmap[H-2] = initmap[H-4]
+  initmap[H-3] = {' '_b,' '_b,'#'_b,'D'_b,'#'_b,'B'_b,'#'_b,'A'_b,'#'_b,'C'_b,'#'_b}
+  initmap[H-4] = {' '_b,' '_b,'#'_b,'D'_b,'#'_b,'C'_b,'#'_b,'B'_b,'#'_b,'A'_b,'#'_b}
+  cache:clear()
+end
+
+initmap = read_input()
+
+-- part 1
+local cost1 = find_best_cost(initmap)
+print('Part 1', cost1)
+
+-- part 2
+unfold()
+local cost2 = find_best_cost(initmap)
+print('Part 2', cost2)
+
+assert(cost1 == 14348)
+assert(cost2 == 40954)
