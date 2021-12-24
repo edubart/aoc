@@ -1,0 +1,84 @@
+require 'io'
+require 'vector'
+
+##[[
+local lines, alus, stack, eqs = {}, {}, {}, {}
+local j = 0
+for line in io.lines('day24.txt') do table.insert(lines, line) end
+for i,line in ipairs(lines) do
+  local inst, a, b = line:match('^(%l+) ([%w-]+) ?([%w-]*)$')
+  if inst == 'div' and a == 'z' then
+    local x, y = lines[i+1]:match('[-%d]+'), lines[i+11]:match('[-%d]+')
+    alus[j] = {x,y}
+    if b == '26' then
+      local lj = table.remove(stack)
+      table.insert(eqs, {di=j,si=lj,off=alus[lj][2] + x})
+    else
+      table.insert(stack, j)
+    end
+    j = j + 1
+  end
+end
+]]
+
+local function execute(inputs: [14]integer) <inline>
+  ## local i = 0
+  local w, x, y, z = 0, 0, 0, 0
+  ## for _,line in ipairs(lines) do
+    ## local inst, a, b = line:match('^(%l+) ([%w-]+) ?([%w-]*)$')
+    ## b = tonumber(b) or symbols[b]
+    ## if inst == 'inp' then
+      #|a|# = inputs[#[i]#]
+      ## i = i + 1
+    ## elseif inst == 'add' then
+      #|a|# = #|a|# + #[b]#
+    ## elseif inst == 'mul' then
+      #|a|# = #|a|# * #[b]#
+    ## elseif inst == 'div' then
+      #|a|# = #|a|# /// #[b]#
+    ## elseif inst == 'mod' then
+      #|a|# = #|a|# %%% #[b]#
+    ## elseif inst == 'eql' then
+      #|a|# = #|a|# == #[b]# and 1 or 0
+    ## end
+  ## end
+  return z
+end
+
+local mininputs: [14]integer = {1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+local maxinputs: [14]integer = {9,9,9,9,9,9,9,9,9,9,9,9,9,9}
+
+## for _,e in pairs(eqs) do
+  for sv=1,9 do
+    local dv = sv+#[e.off]#
+    if dv >= 1 and dv <= 9 then
+      mininputs[#[e.di]#] = dv
+      mininputs[#[e.si]#] = sv
+      break
+    end
+  end
+  for sv=9,1,-1 do
+    local dv = sv+#[e.off]#
+    if dv >= 1 and dv <= 9 then
+      maxinputs[#[e.di]#] = dv
+      maxinputs[#[e.si]#] = sv
+      break
+    end
+  end
+## end
+
+io.write('Part 1\t')
+for i,d in ipairs(maxinputs) do
+  io.write(d)
+end
+io.write'\n'
+
+io.write('Part 2\t')
+for i,d in ipairs(mininputs) do
+  io.write(d)
+end
+io.write'\n'
+io.flush()
+
+assert(execute(maxinputs) == 0)
+assert(execute(mininputs) == 0)
