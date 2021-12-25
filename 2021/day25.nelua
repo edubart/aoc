@@ -1,0 +1,62 @@
+require 'io'
+
+local W, H = 0, 0
+local grid: [140][140]byte
+
+local function read_input()
+  local y = 0
+  for line in io.lines('day25.txt') do
+    W = #line
+    local x = 0
+    for i,c in ipairs(line) do
+      grid[y][x] = c
+      x = x + 1
+    end
+    y = y + 1
+  end
+  H = y
+end
+
+local function step()
+  local newgrid = grid
+  for y=0,<H do
+    for x=0,<W do
+      if grid[y][x] == '>'_b then
+        local nx = (x + 1) % W
+        if grid[y][nx] == '.'_b then
+          newgrid[y][nx] = '>'_b
+          newgrid[y][x] = '.'_b
+        end
+      end
+    end
+  end
+  grid = newgrid
+  for y=0,<H do
+    for x=0,<W do
+      if grid[y][x] == 'v'_b then
+        local ny = (y + 1) % H
+        if grid[ny][x] == '.'_b then
+          newgrid[ny][x] = 'v'_b
+          newgrid[y][x] = '.'_b
+        end
+      end
+    end
+  end
+  grid = newgrid
+end
+
+local function go()
+  local i = 0
+  repeat
+    local oldgrid = grid
+    step()
+    i = i + 1
+    if oldgrid == grid then break end
+  until oldgrid == grid
+  return i
+end
+
+read_input()
+local res = go()
+print('Part 1', res)
+assert(res == 549)
