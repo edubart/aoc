@@ -18,41 +18,42 @@ local function read_input()
 end
 
 local function step()
+  local changed = false
   local newgrid = grid
   for y=0,<H do
+    local lx = W-1
     for x=0,<W do
-      if grid[y][x] == '>'_b then
-        local nx = (x + 1) % W
-        if grid[y][nx] == '.'_b then
-          newgrid[y][nx] = '>'_b
-          newgrid[y][x] = '.'_b
-        end
+      if grid[y][lx] == '>'_b and grid[y][x] == '.'_b then
+        newgrid[y][lx] = '.'_b
+        newgrid[y][x] = '>'_b
+        changed = true
       end
+      lx = x
     end
   end
-  grid = newgrid
+  if changed then
+    grid = newgrid
+  end
+  local ly = H-1
   for y=0,<H do
     for x=0,<W do
-      if grid[y][x] == 'v'_b then
-        local ny = (y + 1) % H
-        if grid[ny][x] == '.'_b then
-          newgrid[ny][x] = 'v'_b
-          newgrid[y][x] = '.'_b
-        end
+      if grid[ly][x] == 'v'_b and grid[y][x] == '.'_b then
+        newgrid[ly][x] = '.'_b
+        newgrid[y][x] = 'v'_b
+        changed = true
       end
     end
+    ly = y
   end
-  grid = newgrid
+  if changed then
+    grid = newgrid
+  end
+  return changed
 end
 
 local function go()
-  local i = 0
-  repeat
-    local oldgrid = grid
-    step()
-    i = i + 1
-    if oldgrid == grid then break end
-  until oldgrid == grid
+  local i = 1
+  while step() do i = i + 1 end
   return i
 end
 
