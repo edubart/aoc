@@ -85,5 +85,7 @@ end
 local count2 = count_pixels()
 print('Part 2', count2)
 
+## if TEST then
 assert(count1 == 5391)
 assert(count2 == 16383)
+## end

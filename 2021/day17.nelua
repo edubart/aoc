@@ -52,9 +52,16 @@ local function countvel(tx1: integer, tx2: integer, ty1: integer, ty2: integer)
   return hits
 end
 
-for line in io.lines('day17.txt') do
-  local _, caps = line:match('target area: x=([%d-]+)%.%.([%d-]+), y=([%d-]+)%.%.([%d-]+)')
-  local tx1, tx2, ty1, ty2 = tointeger(caps[1]), tointeger(caps[2]), tointeger(caps[3]), tointeger(caps[4])
-  print('Part 1', findy(ty1, ty2))
-  print('Part 2', countvel(tx1, tx2, ty1, ty2))
-end
+local file = io.open('day17.txt')
+local line = file:read()
+local _, caps = line:match('target area: x=([%d-]+)%.%.([%d-]+), y=([%d-]+)%.%.([%d-]+)')
+local tx1, tx2, ty1, ty2 = tointeger(caps[1]), tointeger(caps[2]), tointeger(caps[3]), tointeger(caps[4])
+local res1 = findy(ty1, ty2)
+local res2 = countvel(tx1, tx2, ty1, ty2)
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 17766)
+assert(res2 == 1733)
+## end

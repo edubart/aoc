@@ -53,12 +53,21 @@ for step=1,100 do
   do_step()
 end
 
-print('Part 1', flashcount)
+local res1 = flashcount
 
+local res2
 for step=101,1000 do
   do_step()
   if grid == (@[N][N]integer){} then
-    print('Part 2', step)
+    res2 = step
     break
   end
 end
+
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 1669)
+assert(res2 == 351)
+## end

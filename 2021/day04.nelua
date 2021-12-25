@@ -82,3 +82,8 @@ end
 
 print('Part 1', firstscore)
 print('Part 2', lastscore)
+
+## if TEST then
+assert(firstscore == 11536)
+assert(lastscore == 1284)
+## end

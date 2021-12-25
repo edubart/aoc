@@ -65,5 +65,12 @@ local function compute(levels: integer)
   return orderedcounts[#orderedcounts-1] - orderedcounts[0]
 end
 
-print('Part 1', compute(10))
-print('Part 2', compute(40))
+local res1 = compute(10)
+local res2 = compute(40)
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 2375)
+assert(res2 == 1976896901756)
+## end

@@ -59,4 +59,7 @@ end
 read_input()
 local res = go()
 print('Part 1', res)
+
+## if TEST then
 assert(res == 549)
+## end

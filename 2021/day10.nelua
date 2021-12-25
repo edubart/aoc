@@ -48,6 +48,12 @@ for line in io.lines('day10.txt') do
 end
 
 algorithm.sort(compscores)
+local res2 = compscores[#compscores // 2]
 
 print('Part 1', toterrorscore)
-print('Part 2', compscores[#compscores // 2])
+print('Part 2', res2)
+
+## if TEST then
+assert(toterrorscore == 215229)
+assert(res2 == 1105996483)
+## end

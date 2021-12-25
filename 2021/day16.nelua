@@ -78,9 +78,14 @@ local function readpacket()
   return num
 end
 
-for line in io.lines('day16.txt') do
-  readdata(line)
-  local num = readpacket()
-  print('Part 1', versum)
-  print('Part 2', num)
-end
+local file = io.open('day16.txt')
+local line = file:read()
+readdata(line)
+local num = readpacket()
+print('Part 1', versum)
+print('Part 2', num)
+
+## if TEST then
+assert(versum == 1012)
+assert(num == 2223947372407)
+## end

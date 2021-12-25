@@ -73,5 +73,7 @@ print('Part 1', res)
 local maxwins = math.max(compute2(pos1-1, pos2-1, 0, 0))
 print('Part 2', maxwins)
 
+## if TEST then
 assert(res == 503478)
 assert(maxwins == 716241959649754)
+## end

@@ -77,6 +77,9 @@ for inst in file:lines() do
 end
 
 print('Part 1', firstcount)
-
 print('Part 2')
 printpaper()
+
+## if TEST then
+assert(firstcount == 684)
+## end

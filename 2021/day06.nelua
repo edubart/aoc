@@ -25,5 +25,13 @@ local function count_laternfish(timers: [9]integer, days: integer)
   return count
 end
 
-print('Part 1', count_laternfish(timers, 80))
-print('Part 2', count_laternfish(timers, 256))
+local res1 = count_laternfish(timers, 80)
+local res2 = count_laternfish(timers, 256)
+
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 375482)
+assert(res2 == 1689540415957)
+## end

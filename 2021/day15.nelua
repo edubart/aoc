@@ -55,5 +55,12 @@ local function astar(n: int16): int32
   return nodes[goal.y][goal.x]
 end
 
-print('Part 1', astar(N))
-print('Part 2', astar(N*5))
+local res1 = astar(N)
+local res2 = astar(N*5)
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 487)
+assert(res2 == 2821)
+## end

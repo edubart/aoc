@@ -1,6 +1,6 @@
 require 'io'
 
-do -- part 1
+local function part1()
   local horzpos, depth = 0, 0
   for line in io.lines('day02.txt') do
     local _, captures = line:match('(%a+) (%d+)')
@@ -13,10 +13,10 @@ do -- part 1
       depth = depth - units
     end
   end
-  print('Part 1', horzpos * depth)
+  return horzpos * depth
 end
 
-do -- part 2
+local function part2()
   local horzpos, depth, aim = 0, 0, 0
   for line in io.lines('day02.txt') do
     local _, captures = line:match('(%a+) (%d+)')
@@ -30,5 +30,15 @@ do -- part 2
       aim = aim - units
     end
   end
-  print('Part 2', horzpos * depth)
+  return horzpos * depth
 end
+
+local res1 = part1()
+print('Part 1', res1)
+local res2 = part2()
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 1882980)
+assert(res2 == 1971232560)
+## end

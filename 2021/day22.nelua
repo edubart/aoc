@@ -132,12 +132,14 @@ local function part2()
 end
 
 read_input()
-print(#sections)
 
-local p1 = part1()
-print('Part 1', p1)
-assert(p1 == 564654)
+local res1 = part1()
+print('Part 1', res1)
 
-local p2 = part2()
-print('Part 2', p2)
-assert(p2 == 1214193181891104)
+local res2 = part2()
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 564654)
+assert(res2 == 1214193181891104)
+## end

@@ -11,7 +11,7 @@ for num in file:read():gmatch('%d+') do
   minpos, maxpos = math.min(minpos, pos), math.max(maxpos, pos)
 end
 
-local mintotfuel, mintotfuel2 = math.maxinteger, math.maxinteger
+local mintotfuel1, mintotfuel2 = math.maxinteger, math.maxinteger
 for alignpos=minpos,maxpos do
   local totfuel, totfuel2 = 0, 0
   for i,pos in ipairs(crabs) do
@@ -20,9 +20,14 @@ for alignpos=minpos,maxpos do
     totfuel = totfuel + fuel
     totfuel2 = totfuel2 + fuel2
   end
-  mintotfuel = math.min(mintotfuel, totfuel)
+  mintotfuel1 = math.min(mintotfuel1, totfuel)
   mintotfuel2 = math.min(mintotfuel2, totfuel2)
 end
 
-print('Part 1', mintotfuel)
+print('Part 1', mintotfuel1)
 print('Part 2', mintotfuel2)
+
+## if TEST then
+assert(mintotfuel1 == 348664)
+assert(mintotfuel2 == 100220525)
+## end

@@ -184,7 +184,7 @@ end
 
 local nodes: vector(*Node)
 
-do -- part 1
+local function part1()
   local result: *Node
   for line <close> in io.lines('day18.txt') do
     local node = Node.parse(line)
@@ -196,12 +196,11 @@ do -- part 1
     end
   end
   local magnitude = result:magnitude()
-  print('Part 1', magnitude)
-  assert(magnitude == 4137)
   result:destroy()
+  return magnitude
 end
 
-do -- part 2
+local function part2()
   local max = 0
   for l,lnode in ipairs(nodes) do
     for r,rnode in ipairs(nodes) do
@@ -213,11 +212,20 @@ do -- part 2
       result:destroy()
     end
   end
-  print('Part 2', max)
-  assert(max == 4573)
+  return max
 end
 
 for i,node in ipairs(nodes) do
   node:destroy()
 end
 nodes:destroy()
+
+local res1 = part1()
+local res2 = part2()
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 4137)
+assert(res2 == 4573)
+## end

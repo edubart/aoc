@@ -198,5 +198,7 @@ print('Part 1', numbeacons)
 local maxdist = get_max_distance(scanners)
 print('Part 2', maxdist)
 
+## if TEST then
 assert(numbeacons == 438)
 assert(maxdist == 11985)
+## end

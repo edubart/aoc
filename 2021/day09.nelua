@@ -79,6 +79,12 @@ for y=0,H-1 do
 end
 
 algorithm.sort(basins)
+local res2 = basins[#basins-1] * basins[#basins-2] * basins[#basins-3]
 
 print('Part 1', sum)
-print('Part 2', basins[#basins-1] * basins[#basins-2] * basins[#basins-3])
+print('Part 2', res2)
+
+## if TEST then
+assert(sum == 512)
+assert(res2 == 1600104)
+## end

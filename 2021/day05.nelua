@@ -36,5 +36,12 @@ local function count_points(map: *[N][N]integer)
   return n
 end
 
-print('Part 1', count_points(map1))
-print('Part 2', count_points(map2))
+local res1 = count_points(map1)
+print('Part 1', res1)
+local res2 = count_points(map2)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 6113)
+assert(res2 == 20373)
+## end

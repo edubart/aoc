@@ -211,5 +211,7 @@ unfold()
 local cost2 = find_best_cost(initmap)
 print('Part 2', cost2)
 
+## if TEST then
 assert(cost1 == 14348)
 assert(cost2 == 40954)
+## end

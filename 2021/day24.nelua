@@ -67,18 +67,24 @@ local maxinputs: [14]integer = {9,9,9,9,9,9,9,9,9,9,9,9,9,9}
   end
 ## end
 
-io.write('Part 1\t')
-for i,d in ipairs(maxinputs) do
-  io.write(d)
+local function tonum(inputs: [14]integer)
+  local n, m = 0, 1
+  for i=#inputs-1,0,-1 do
+    n = n + inputs[i]*m
+    m = m * 10
+  end
+  return n
 end
-io.write'\n'
 
-io.write('Part 2\t')
-for i,d in ipairs(mininputs) do
-  io.write(d)
-end
-io.write'\n'
-io.flush()
+local max = tonum(maxinputs)
+local min = tonum(mininputs)
 
+print('Part 1', max)
+print('Part 2', min)
+
+## if TEST then
+assert(max == 99995969919326)
+assert(min == 48111514719111)
 assert(execute(maxinputs) == 0)
 assert(execute(mininputs) == 0)
+## end

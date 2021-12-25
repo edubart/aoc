@@ -25,7 +25,7 @@ local function get_common_bit(nums: hashmap(integer, boolean), bit: integer)
   return bitcount >= (#nums - bitcount) and 1 or 0
 end
 
-do -- part 1
+local function part1()
   local gamma = 0
   for bit=0,nbits-1 do
     if get_common_bit(inputnums, bit) == 1 then
@@ -33,10 +33,10 @@ do -- part 1
     end
   end
   local epsilon = ~gamma & ((1 << nbits) - 1)
-  print('Part 1', gamma*epsilon)
+  return gamma*epsilon
 end
 
-do -- part 2
+local function part2()
   local oxynums: hashmap(integer, boolean) = {}
   local co2nums: hashmap(integer, boolean) = {}
   for num in pairs(inputnums) do
@@ -65,5 +65,16 @@ do -- part 2
     if #co2nums <= 1 then break end
   end
   local _, co2num = next(co2nums)
-  print('Part 2', oxynum * co2num)
+  return oxynum * co2num
 end
+
+local res1 = part1()
+print('Part 1', res1)
+
+local res2 = part2()
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 3687446)
+assert(res2 == 4406844)
+## end

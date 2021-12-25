@@ -114,3 +114,8 @@ end
 
 print('Part 1', count)
 print('Part 2', sum)
+
+## if TEST then
+assert(count == 409)
+assert(sum == 1024649)
+## end

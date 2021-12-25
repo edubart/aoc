@@ -49,5 +49,12 @@ for line in io.lines('day12.txt') do
   b.links:push(a)
 end
 
-print('Part 1', searchpaths(nodes['start'], 1))
-print('Part 2', searchpaths(nodes['start'], 2))
+local res1 = searchpaths(nodes['start'], 1)
+local res2 = searchpaths(nodes['start'], 2)
+print('Part 1', res1)
+print('Part 2', res2)
+
+## if TEST then
+assert(res1 == 5104)
+assert(res2 == 149220)
+## end
