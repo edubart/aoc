@@ -156,7 +156,8 @@ function Node.parse(chunk: string): *Node
     return new(Node{value=tointeger(chunk), numeric=true})
   else -- pair
     chunk = chunk:subview(2,-2)
-    local ok, caps <close>
+    local ok, caps
+    defer caps:destroy() end
     if chunk[1] == '['_b then
       ok, caps = chunk:matchview('(%b[]),(.*)')
     else
